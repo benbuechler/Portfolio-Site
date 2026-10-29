@@ -1,0 +1,72 @@
+
+:root {
+  /* Colours */
+  --color-bg: #090D17;
+  --color-surface: #131A2B;
+  --color-accent: #5076F2;
+  --color-text: #F4F6FA;
+  --color-muted: #A9B1C2;
+  --color-border: #263249;
+
+  /* Typography */
+  --font-primary: 'Poppins', system-ui, sans-serif;
+
+  /* Layout */
+  --max-width: 1200px;
+  --border-radius: 12px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  margin: 0;
+  background: var(--color-bg);
+  color: var(--color-text);
+  font-family: var(--font-primary);
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* Shared Navigation */
+
+.site-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 24px 7%;
+}
+
+.logo {
+  font-size: 26px;
+  font-weight: 800;
+}
+
+.logo span {
+  color: var(--color-accent);
+}
+
+/* Main Content Container */
+
+.site-main {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 7%;
+}
+
+/* Shared Footer */
+
+.site-footer {
+  padding: 30px 7%;
+  border-top: 1px solid var(--color-border);
+  color: var(--color-muted);
+}
