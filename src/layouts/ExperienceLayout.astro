@@ -1,0 +1,101 @@
+---
+import BaseLayout from "./BaseLayout.astro";
+import type { ExperienceFrontmatter } from "../lib/experiences";
+
+interface Props {
+  frontmatter: ExperienceFrontmatter;
+}
+
+const { title, summary, category, period, organization } = Astro.props.frontmatter;
+const experienceHref = `${import.meta.env.BASE_URL}experience`;
+---
+
+<BaseLayout title={title} description={summary}>
+  <article class="experience-article">
+    <a class="back-link text-link" href={experienceHref}><span aria-hidden="true">←</span> Back to experience</a>
+
+    <header class="experience-heading">
+      <p class="eyebrow">{category} <span aria-hidden="true">/</span> {period}</p>
+      <h1>{title}<span class="accent">.</span></h1>
+      {organization && <p class="organization">{organization}</p>}
+      <p class="experience-overview">{summary}</p>
+    </header>
+
+    <div class="experience-story">
+      <slot />
+    </div>
+
+    <footer class="experience-footer">
+      <a class="text-link" href={experienceHref}><span aria-hidden="true">←</span> Return to the timeline</a>
+    </footer>
+  </article>
+</BaseLayout>
+
+<style>
+  .experience-article {
+    max-width: 75ch;
+    margin-block: 2rem 5rem;
+  }
+
+  .back-link {
+    margin-bottom: 2rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .experience-heading {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+    overflow-wrap: anywhere;
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
+
+  .organization {
+    margin-block: 1rem 0;
+    font-weight: 600;
+  }
+
+  .experience-overview {
+    margin-block: 1.5rem 0;
+    color: var(--color-muted);
+    font-size: 1.125rem;
+  }
+
+  .experience-story {
+    padding-block: 1rem 2rem;
+  }
+
+  .experience-story :global(h2) {
+    margin-block: 2rem 0.75rem;
+    font-size: 1.375rem;
+    line-height: 1.35;
+    scroll-margin-top: 2rem;
+  }
+
+  .experience-story :global(p),
+  .experience-story :global(li) {
+    color: var(--color-muted);
+    line-height: 1.8;
+  }
+
+  .experience-story :global(a) {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  .experience-footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+</style>

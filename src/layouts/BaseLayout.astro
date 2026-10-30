@@ -1,6 +1,6 @@
 
 ---
-import '../styles/global.css';
+import "../styles/global.css";
 
 interface Props {
   title: string;
@@ -9,8 +9,16 @@ interface Props {
 
 const {
   title,
-  description = "Engineering portfolio of Ben Buechler"
+  description = "Engineering portfolio of Ben Buechler",
 } = Astro.props;
+
+const navigation = [
+  { href: "/", label: "Home" },
+  { href: "/projects", label: "Projects" },
+  { href: "/contact", label: "Contact" },
+  { href: "/experience", label: "Experience" },
+];
+const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 ---
 
 <!doctype html>
@@ -19,23 +27,83 @@ const {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <script is:inline>
+      // Apply the preference before rendering to avoid a flash of the wrong theme.
+      let savedTheme;
+      try {
+        savedTheme = localStorage.getItem("theme");
+      } catch {}
+      document.documentElement.dataset.theme =
+        savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light";
+    </script>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | Ben Buechler</title>
   </head>
 
   <body>
-    <header>
-      <nav class="site-nav">
-        <a class="logo" href="/">BB<span>.</span></a>
-        <a href="/#projects">Projects</a>
+    <a class="skip-link" href="#main-content">Skip to content</a>
+    <header class="site-header">
+      <nav class="site-nav" aria-label="Main navigation">
+        <a class="logo" href="/" aria-label="Ben Buechler home">BB<span>.</span></a>
+        <div class="nav-links">
+          {navigation.map(({ href, label }) => (
+            <a href={href} aria-current={currentPath === href ? "page" : href !== "/" && currentPath.startsWith(`${href}/`) ? "location" : undefined}>
+              {label}
+            </a>
+          ))}
+          <label class="theme-toggle" hidden>
+            <span>Light</span>
+            <input id="theme-toggle" type="checkbox" role="switch" aria-label="Dark mode" />
+            <span class="theme-track" aria-hidden="true"></span>
+            <span>Dark</span>
+          </label>
+        </div>
       </nav>
     </header>
 
-    <main class="site-main">
+    <main id="main-content" class="site-main" tabindex="-1">
       <slot />
     </main>
 
     <footer class="site-footer">
       © {new Date().getFullYear()} Ben Buechler
     </footer>
+    <script>
+      const toggle = document.querySelector<HTMLInputElement>("#theme-toggle");
+      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+      let hasPreference = false;
+      try {
+        hasPreference = ["light", "dark"].includes(localStorage.getItem("theme") ?? "");
+      } catch {}
+
+      if (toggle) {
+        toggle.checked = document.documentElement.dataset.theme === "dark";
+        toggle.closest("label")?.removeAttribute("hidden");
+        toggle.addEventListener("change", () => {
+          const theme = toggle.checked ? "dark" : "light";
+          document.documentElement.dataset.theme = theme;
+          hasPreference = true;
+          try {
+            localStorage.setItem("theme", theme);
+          } catch {}
+        });
+        systemTheme.addEventListener("change", ({ matches }) => {
+          if (!hasPreference) {
+            document.documentElement.dataset.theme = matches ? "dark" : "light";
+            toggle.checked = matches;
+          }
+        });
+      }
+    </script>
   </body>
 </html>
+
+<style>
+.site-header {
+  border-bottom: 1px solid var(--border-color);
+}
+</style>

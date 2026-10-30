@@ -1,148 +1,32 @@
 
 ---
 import BaseLayout from "../layouts/BaseLayout.astro";
-
-const projects = [
-  {
-    title: "Wireless Load-Sensing Bolt",
-    category: "Electronics / Embedded Systems",
-    description: "Exploring NFC-powered wireless strain sensing for industrial fasteners."
-  },
-  {
-    title: "Home Lab & Automation",
-    category: "Networking / Software",
-    description: "Building and managing self-hosted services and automation systems."
-  },
-  {
-    title: "Microcontroller Projects",
-    category: "Embedded Programming",
-    description: "Developing hardware and firmware using PIC, ESP32, and other microcontrollers."
-  }
-];
+import Header from "../components/Header.astro";
+import PageCloud from "../components/PageCloud.astro";
+import { sitePages } from "../lib/site-pages";
 ---
 
 <BaseLayout title="Home">
-
-  <section class="hero">
-    <p class="eyebrow">
-      ENGINEERING · TECHNOLOGY · DESIGN
-    </p>
-
-    <h1>
-      Hi, I'm Ben.<br />
-      <span>I build things.</span>
-    </h1>
-
-    <p class="intro">
-      Exploring the intersection of electronics,
-      software, automation, and creative engineering.
-    </p>
-
-    <a class="button" href="#projects">
-      Explore my work ↓
-    </a>
-  </section>
-
-  <section id="projects">
-    <p class="eyebrow">SELECTED WORK</p>
-    <h2>Featured Projects</h2>
-
-    <div class="project-grid">
-      {projects.map((project) => (
-        <article class="project-card">
-          <p class="category">{project.category}</p>
-          <h3>{project.title}</h3>
-          <p>{project.description}</p>
-        </article>
-      ))}
+  <div class="home-hero">
+    <PageCloud pages={sitePages} />
+    <div class="hero-content">
+      <Header />
     </div>
-  </section>
-
+  </div>
 </BaseLayout>
 
 <style>
-  .hero {
-    min-height: 75vh;
+  .home-hero {
+    position: relative;
+    isolation: isolate;
     display: flex;
-    flex-direction: column;
-    justify-content: center;
+    align-items: center;
+    min-height: clamp(32rem, 75svh, 54rem);
+    padding-block: clamp(2rem, 5vw, 5rem) clamp(3rem, 7vw, 6rem);
   }
 
-  .eyebrow {
-    color: #8eabff;
-    letter-spacing: 3px;
-    font-size: 12px;
-    font-weight: 700;
-  }
-
-  h1 {
-    font-size: clamp(48px, 8vw, 100px);
-    line-height: 1.08;
-    letter-spacing: -3px;
-    margin: 20px 0;
-  }
-
-  h1 span {
-    color: var(--color-accent);
-  }
-
-  .intro {
-    color: var(--color-muted);
-    font-size: 19px;
-    max-width: 550px;
-  }
-
-  .button {
-    margin-top: 30px;
-    padding: 14px 24px;
-    background: var(--color-accent);
-    width: fit-content;
-    border-radius: 8px;
-    font-weight: 600;
-    color: white;
-  }
-
-  #projects {
-    padding: 60px 0 120px;
-  }
-
-  h2 {
-    font-size: 38px;
-  }
-
-  .project-grid {
-    display: grid;
-    grid-template-columns: repeat(
-      auto-fit, minmax(250px, 1fr)
-    );
-    gap: 20px;
-  }
-
-  .project-card {
-    background: var(--color-surface);
-    border: 1px solid var(--color-border);
-    border-radius: 14px;
-    padding: 28px;
-    transition:
-      transform 0.25s,
-      border-color 0.25s;
-  }
-
-  .project-card:hover {
-    transform: translateY(-6px);
-    border-color: var(--color-accent);
-  }
-
-  .category {
-    color: #8eabff;
-    font-size: 12px;
-  }
-
-  .project-card h3 {
-    font-size: 22px;
-  }
-
-  .project-card p:last-child {
-    color: var(--color-muted);
+  .hero-content {
+    width: 100%;
+    max-width: 48rem;
   }
 </style>

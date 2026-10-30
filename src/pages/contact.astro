@@ -1,0 +1,37 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+// Add your profile URLs here. Cards become links once a URL is provided.
+const profiles = [
+  { name: "LinkedIn", description: "Professional experience, education, and connections.", href: "" },
+  { name: "GitHub", description: "Source code, experiments, and project repositories.", href: "" },
+  { name: "Email", description: "Get in touch about opportunities and collaboration.", href: "" },
+];
+---
+
+<BaseLayout title="Contact" description="Connect with Ben Buechler through professional profiles and email.">
+  <header class="page-heading">
+    <p class="eyebrow">Contact</p>
+    <h1>Let’s connect.</h1>
+    <p class="page-intro">
+      Find my work online or get in touch about electrical engineering,
+      projects, and opportunities to collaborate.
+    </p>
+  </header>
+
+  <section class="card-grid" aria-label="Professional profiles and contact information">
+    {profiles.map(({ name, description, href }) => (
+      <article class="content-card">
+        <h2>{name}</h2>
+        <p>{description}</p>
+        {href ? (
+          <a class="text-link" href={href}>
+            {name === "Email" ? "Send an email" : `Visit ${name}`} <span aria-hidden="true">↗</span>
+          </a>
+        ) : (
+          <p class="status">{name === "Email" ? "Email address coming soon" : "Profile link coming soon"}</p>
+        )}
+      </article>
+    ))}
+  </section>
+</BaseLayout>

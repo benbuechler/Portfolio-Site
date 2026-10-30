@@ -1,0 +1,195 @@
+---
+import type { Experience } from "../lib/experiences";
+
+interface Props {
+  experiences: Experience[];
+}
+
+const { experiences } = Astro.props;
+---
+
+<section class="experience-timeline" aria-labelledby="timeline-heading">
+  <div class="timeline-scroll" role="region" aria-label="Experience timeline" aria-describedby="timeline-help" tabindex="0">
+    <ol class="timeline-list">
+      {experiences.map((experience, index) => (
+        <li class="timeline-item">
+          <a
+            class="timeline-link"
+            href={experience.href}
+            aria-labelledby={`experience-title-${index}`}
+            aria-describedby={`experience-period-${index} experience-summary-${index}`}
+          >
+            <span class="timeline-period" id={`experience-period-${index}`}>{experience.period}</span>
+            <span class="node-track" aria-hidden="true"><span class="timeline-node"></span></span>
+            <div class="timeline-content">
+              <span class="timeline-category">{experience.category}</span>
+              <h3 id={`experience-title-${index}`}>{experience.title}</h3>
+              {experience.organization && <p class="timeline-organization">{experience.organization}</p>}
+              <p class="timeline-summary" id={`experience-summary-${index}`}>{experience.summary}</p>
+              <span class="read-story">Read the story <span aria-hidden="true">↗</span></span>
+            </div>
+          </a>
+        </li>
+      ))}
+    </ol>
+  </div>
+  <p class="scroll-hint">Scroll horizontally to explore the timeline <span aria-hidden="true">→</span></p>
+</section>
+
+<style>
+  .experience-timeline {
+    margin-block: 1rem 5rem;
+  }
+
+  .timeline-heading h2 {
+    margin-block: 0 0.5rem;
+    font-size: 1.125rem;
+  }
+
+  .timeline-heading p,
+  .scroll-hint {
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .timeline-scroll {
+    overflow-x: auto;
+    padding: 0.5rem;
+    margin-inline: -0.5rem;
+    scroll-snap-type: x proximity;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-border) transparent;
+    border-radius: var(--border-radius);
+  }
+
+  .timeline-scroll:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
+  }
+
+  .timeline-list {
+    --date-row: 2.5rem;
+    --node-row: 3.5rem;
+    --item-padding: 1.25rem;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: minmax(18rem, 1fr);
+    min-width: 100%;
+    margin: 0;
+    padding: 1.5rem 0 2rem;
+    list-style: none;
+  }
+
+  .timeline-item {
+    position: relative;
+    scroll-snap-align: start;
+  }
+
+  .timeline-item::before {
+    content: "";
+    position: absolute;
+    inset-inline: 0;
+    top: calc(var(--item-padding) + var(--date-row) + var(--node-row) / 2);
+    height: 1px;
+    background: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
+  }
+
+  .timeline-item:first-child::before {
+    left: 50%;
+  }
+
+  .timeline-item:last-child::before {
+    right: 50%;
+  }
+
+  .timeline-item:only-child::before {
+    display: none;
+  }
+
+  .timeline-link {
+    position: relative;
+    display: grid;
+    grid-template-rows: var(--date-row) var(--node-row) auto;
+    height: 100%;
+    padding: var(--item-padding);
+    border-radius: var(--border-radius);
+    text-align: center;
+  }
+
+  .timeline-period {
+    align-self: center;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .node-track {
+    display: grid;
+    place-items: center;
+  }
+
+  .timeline-node {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background: var(--color-accent);
+    box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent) 13%, transparent);
+  }
+
+  .timeline-content {
+    max-width: 30ch;
+    margin-inline: auto;
+    padding-top: 1.25rem;
+  }
+
+  .timeline-category {
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  h3 {
+    margin-block: 0.5rem 0.75rem;
+    font-size: clamp(1.25rem, 2vw, 1.5rem);
+    line-height: 1.3;
+    overflow-wrap: anywhere;
+  }
+
+  .timeline-organization {
+    margin-block: 0.5rem;
+    font-weight: 500;
+  }
+
+  .timeline-summary {
+    color: var(--color-muted);
+    font-size: 0.9375rem;
+  }
+
+  .read-story {
+    display: inline-block;
+    padding-block: 0.5rem;
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .timeline-link:hover .timeline-node,
+  .timeline-link:focus-visible .timeline-node {
+    box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-accent), 0 0 0 11px color-mix(in srgb, var(--color-accent) 16%, transparent);
+  }
+
+  .timeline-link:hover .read-story,
+  .timeline-link:focus-visible .read-story {
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  .scroll-hint {
+    margin-top: 0.5rem;
+  }
+
+  @media (min-width: 50rem) {
+    .scroll-hint {
+      display: none;
+    }
+  }
+</style>

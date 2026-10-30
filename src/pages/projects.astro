@@ -1,0 +1,60 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+
+interface Project {
+  title: string;
+  summary: string;
+  tools: string[];
+  href?: string;
+}
+
+// Add a project for each piece of work you want to showcase.
+// Include its goal, your contribution, and the results in the summary.
+const projects: Project[] = [];
+---
+
+<BaseLayout title="Projects" description="Explore Ben Buechler’s electrical engineering projects, process, and results.">
+  <header class="page-heading">
+    <p class="eyebrow">Projects</p>
+    <h1>Ideas put into practice<span class="accent">.</span></h1>
+    <p class="page-intro">
+      A place to share what I’m building, how it works, and what I’ve learned
+      along the way.
+    </p>
+  </header>
+
+  <section aria-labelledby="project-list-heading" class="page-section">
+    <h2 id="project-list-heading">My projects</h2>
+    {projects.length > 0 ? (
+      <div class="card-grid">
+        {projects.map(({ title, summary, tools, href }) => (
+          <article class="content-card">
+            <h3>{title}</h3>
+            <p>{summary}</p>
+            {tools.length > 0 && (
+              <ul class="tag-list" aria-label="Tools and technologies">
+                {tools.map((tool) => <li>{tool}</li>)}
+              </ul>
+            )}
+            {href && <a class="text-link" href={href}>Explore project <span aria-hidden="true">→</span></a>}
+          </article>
+        ))}
+      </div>
+    ) : (
+      <div class="content-card empty-state">
+        <h3>Project write-ups are on the way.</h3>
+        <p>
+          Check back for project overviews, design decisions, and results.
+          In the meantime, visit my contact page to connect.
+        </p>
+        <a class="text-link" href="/contact">Get in touch <span aria-hidden="true">→</span></a>
+      </div>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  .accent {
+    color: var(--color-accent);
+  }
+</style>

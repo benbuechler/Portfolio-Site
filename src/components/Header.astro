@@ -1,0 +1,62 @@
+<header>
+  <h1>My name is <span class="accent">Ben</span>!<br />Welcome to My Portfolio</h1>
+  <p class="description">
+    I am an electrical engineering student with a passion for technology and
+    innovation. This portfolio showcases my projects, skills, and experiences in
+    the field of electrical engineering. Feel free to explore and learn more
+    about my work!
+  </p>
+  <div class="button-container">
+    <a href="/projects" class="button">View Projects</a>
+    <a href="/contact" class="button button-secondary">Contact Me</a>
+  </div>
+</header>
+
+<style>
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 4rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .accent {
+    color: var(--color-accent);
+  }
+
+  .description {
+    max-width: 65ch;
+    margin-block: 1.5rem 2rem;
+    color: var(--color-muted);
+    font-size: 1.125rem;
+  }
+
+  .button-container {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+
+  .button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 44px;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid var(--color-accent);
+    border-radius: var(--border-radius);
+    background: var(--color-accent);
+    color: var(--color-on-accent);
+    font-weight: 600;
+  }
+
+  .button-secondary {
+    color: var(--color-text);
+    border-color: var(--color-border);
+    background: var(--color-surface);
+  }
+
+  .button:hover {
+    filter: brightness(1.15);
+  }
+</style>

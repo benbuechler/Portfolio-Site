@@ -1,0 +1,209 @@
+---
+import { createPageCloud, layoutPageCloud } from "../lib/page-cloud";
+import type { SitePage } from "../lib/site-pages";
+
+interface Props {
+  pages: SitePage[];
+}
+
+const { pages } = Astro.props;
+const { nodes, connections, extent } = createPageCloud(pages);
+const initialPositions = layoutPageCloud(nodes, extent, 1000, 600);
+---
+
+<page-cloud data-pages={JSON.stringify(pages)} aria-hidden="true">
+  <svg class="cloud-fallback" viewBox="0 0 1000 600" preserveAspectRatio="none">
+    {connections.map(([from, to]) => (
+      <line x1={initialPositions[from].x} y1={initialPositions[from].y} x2={initialPositions[to].x} y2={initialPositions[to].y} />
+    ))}
+    {initialPositions.map((point, index) => (
+      <g>
+        <circle cx={point.x} cy={point.y} r="5" />
+        <text x={point.x + 14} y={point.y + 4}>{pages[index].label}</text>
+      </g>
+    ))}
+  </svg>
+  <canvas></canvas>
+</page-cloud>
+
+<script>
+  import { createPageCloud, layoutPageCloud } from "../lib/page-cloud";
+
+  class PageCloud extends HTMLElement {
+    private cleanup?: () => void;
+
+    connectedCallback() {
+      if (this.cleanup) return;
+      const canvas = this.querySelector("canvas");
+      if (!canvas) return;
+      const context = canvas.getContext("2d");
+      if (!context) return;
+
+      const pages: { href: string; label: string }[] = JSON.parse(this.dataset.pages ?? "[]");
+      const { nodes, connections, extent } = createPageCloud(pages);
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      let width = 0;
+      let height = 0;
+      let accent = "";
+      let text = "";
+      let elapsed = 0;
+      let lastFrame = 0;
+      let frame = 0;
+      let visible = false;
+
+      function draw() {
+        const ctx = context!;
+        ctx.clearRect(0, 0, width, height);
+        const positions = layoutPageCloud(nodes, extent, width, height, elapsed);
+        ctx.strokeStyle = accent;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = 0.4;
+        ctx.beginPath();
+        for (const [from, to] of connections) {
+          ctx.moveTo(positions[from].x, positions[from].y);
+          ctx.lineTo(positions[to].x, positions[to].y);
+        }
+        ctx.stroke();
+
+        // One visible point per actual page, with no decorative particles.
+        positions.forEach((point, index) => {
+          ctx.fillStyle = accent;
+          ctx.globalAlpha = 0.13;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 12, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.globalAlpha = 0.9;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = text;
+          ctx.globalAlpha = 0.7;
+          ctx.font = "12px system-ui, sans-serif";
+          const labelWidth = ctx.measureText(nodes[index].label).width;
+          const labelX = Math.max(8, Math.min(width - labelWidth - 8, point.x + 16));
+          ctx.fillText(nodes[index].label, labelX, point.y + 4);
+        });
+        ctx.globalAlpha = 1;
+      }
+
+      function shouldAnimate() {
+        return visible && !document.hidden && !reducedMotion.matches;
+      }
+
+      function tick(now: number) {
+        frame = 0;
+        if (lastFrame) elapsed += Math.min((now - lastFrame) / 1000, 0.05);
+        lastFrame = now;
+        draw();
+        if (shouldAnimate()) frame = requestAnimationFrame(tick);
+      }
+
+      function updateAnimation() {
+        cancelAnimationFrame(frame);
+        frame = 0;
+        lastFrame = 0;
+        draw();
+        if (shouldAnimate()) frame = requestAnimationFrame(tick);
+      }
+
+      const resize = () => {
+        const bounds = this.getBoundingClientRect();
+        width = bounds.width;
+        height = bounds.height;
+        const ratio = Math.min(window.devicePixelRatio || 1, 2);
+        canvas.width = Math.round(width * ratio);
+        canvas.height = Math.round(height * ratio);
+        context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        draw();
+      };
+
+      function readTheme() {
+        accent = getComputedStyle(canvas!).color;
+        text = getComputedStyle(document.documentElement).getPropertyValue("--color-muted").trim();
+        draw();
+      }
+
+      const controller = new AbortController();
+      const options = { signal: controller.signal };
+      reducedMotion.addEventListener("change", updateAnimation, options);
+      document.addEventListener("visibilitychange", updateAnimation, options);
+
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(this);
+      const visibilityObserver = new IntersectionObserver(([entry]) => {
+        visible = entry.isIntersecting;
+        updateAnimation();
+      });
+      visibilityObserver.observe(this);
+      const themeObserver = new MutationObserver(readTheme);
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      readTheme();
+      resize();
+      this.dataset.ready = "true";
+
+      this.cleanup = () => {
+        cancelAnimationFrame(frame);
+        controller.abort();
+        resizeObserver.disconnect();
+        visibilityObserver.disconnect();
+        themeObserver.disconnect();
+      };
+    }
+
+    disconnectedCallback() {
+      this.cleanup?.();
+      this.cleanup = undefined;
+    }
+  }
+
+  if (!customElements.get("page-cloud")) customElements.define("page-cloud", PageCloud);
+</script>
+
+<style>
+  page-cloud {
+    display: block;
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    overflow: hidden;
+    pointer-events: none;
+    opacity: 0.6;
+    mask-image: linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 65%) 55%, black);
+  }
+
+  canvas,
+  .cloud-fallback {
+    display: block;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    inset: 0;
+    color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
+  }
+
+  canvas {
+    visibility: hidden;
+  }
+
+  [data-ready="true"] canvas {
+    visibility: visible;
+  }
+
+  [data-ready="true"] .cloud-fallback {
+    display: none;
+  }
+
+  .cloud-fallback line {
+    stroke: currentColor;
+    stroke-opacity: 0.4;
+  }
+
+  .cloud-fallback circle {
+    fill: currentColor;
+  }
+
+  .cloud-fallback text {
+    fill: var(--color-muted);
+    font: 12px system-ui, sans-serif;
+  }
+</style>

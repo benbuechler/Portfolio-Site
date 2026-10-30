@@ -1,0 +1,24 @@
+---
+import BaseLayout from "../layouts/BaseLayout.astro";
+import ExperienceTimeline from "../components/ExperienceTimeline.astro";
+import { experiences } from "../lib/experiences";
+---
+
+<BaseLayout title="Experience" description="Explore Ben Buechler’s electrical engineering experience, process, and results.">
+  <header class="page-heading">
+    <p class="eyebrow">Experience</p>
+    <h1>My journey in the professional world<span class="accent">.</span></h1>
+    <p class="page-intro">
+      A quick look at my journey. Choose an experience to read the full story,
+      or follow the timeline for an overview.
+    </p>
+  </header>
+
+  <ExperienceTimeline experiences={experiences} />
+</BaseLayout>
+
+<style>
+  .accent {
+    color: var(--color-accent);
+  }
+</style>
