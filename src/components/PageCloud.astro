@@ -60,7 +60,7 @@ const { nodes } = createPageCloud(pages);
   <div class="cloud-controls" hidden>
     <p class="cloud-help" id="cloud-instructions">
       <span class="desktop-help">Drag to rotate · Select a page</span>
-      <span class="touch-help">Swipe sideways to spin · Tap a page</span>
+      <span class="touch-help">Swipe to spin · Tap a page</span>
       <span class="sr-only">Focus the map and use the arrow keys to rotate, or use the rotation buttons. Press Home to reset the view. Tab to a page link and press Enter to visit it.</span>
     </p>
     <div class="rotation-buttons" role="group" aria-label="Rotate map">
@@ -550,8 +550,9 @@ const { nodes } = createPageCloud(pages);
   /* These styles activate only after JavaScript marks the component ready. */
   [data-ready="true"] .cloud-viewport {
     cursor: grab;
-    /* Let touch users scroll the page vertically and pinch to zoom. */
-    touch-action: pan-y pinch-zoom;
+    /* Reserve one-finger swipes for rotation in both directions. Pinch zoom
+       stays available; swipes outside this viewport still scroll the page. */
+    touch-action: pinch-zoom;
     /* Prevent text selection during dragging. The WebKit-prefixed property
        supports browsers that still require that spelling. */
     user-select: none;
