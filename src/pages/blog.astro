@@ -1,0 +1,194 @@
+---
+// This file becomes /blog. Frontmatter runs while Astro builds or previews the
+// page; discovering and sorting entries does not add JavaScript to the browser.
+import BaseLayout from "../layouts/BaseLayout.astro";
+import { formatBlogDate } from "../lib/blog";
+// Type-only imports help the editor check data and disappear from compiled JS.
+import type { MarkdownInstance } from "astro";
+import type { BlogFrontmatter, BlogPost } from "../lib/blog";
+
+// Vite's glob finds Markdown files. eager: true imports their metadata now.
+// The ! pattern excludes underscore-prefixed templates and unfinished entries;
+// Astro also keeps those filenames out of its published page routes.
+const entryFiles = import.meta.glob<MarkdownInstance<BlogFrontmatter>>(
+  ["/src/pages/blog/*.md", "!/src/pages/blog/_*.md"],
+  { eager: true },
+);
+
+// Object.entries produces [filename, module] pairs. flatMap combines the arrays
+// returned below: [] skips a file, while [post] includes its preview in the list.
+const posts: BlogPost[] = Object.entries(entryFiles)
+  .flatMap(([file, entry]) => {
+    const filename = file.split("/").at(-1) ?? "";
+    // Skip private/dynamic filenames and modules without an actual page URL.
+    if (!entry.url || /^[_.]/.test(filename) || /[\[\]]/.test(filename)) return [];
+
+    // Destructuring extracts the YAML fields; tags defaults to an empty array
+    // when omitted. These checks give useful errors for incomplete new entries.
+    const { title, summary, date, tags = [] } = entry.frontmatter;
+    if (typeof title !== "string" || !title.trim() || typeof summary !== "string" || !summary.trim()) {
+      throw new Error(`Blog entry "${filename}" needs a non-empty title and summary.`);
+    }
+    if (!Array.isArray(tags) || tags.some((tag) => typeof tag !== "string" || !tag.trim())) {
+      throw new Error(`Blog entry "${filename}" needs tags to be an array of non-empty strings.`);
+    }
+    // The shared formatter validates the date as well as making readable labels.
+    formatBlogDate(date);
+    return [{ title, summary, date, tags, href: entry.url }];
+  })
+  // YYYY-MM-DD strings sort in calendar order. Compare b with a for newest first;
+  // when dates match, || uses an alphabetical title comparison to break the tie.
+  .sort((a, b) => b.date.localeCompare(a.date) || a.title.localeCompare(b.title, "en"));
+---
+
+<!-- Reuse the site's document, navigation, theme controls, and footer. -->
+<BaseLayout title="Blog" description="Notes from Ben Buechler on engineering, projects, and the things he is learning.">
+  <header class="page-heading">
+    <p class="eyebrow">Blog</p>
+    <h1>Notes from what I’m learning<span class="accent">.</span></h1>
+    <p class="page-intro">
+      Engineering, projects, and ideas I want to keep track of along the way.
+      A place for discoveries, progress, and the questions that come next.
+    </p>
+  </header>
+
+  <!-- The section has an accessible name; the ordered list follows publication
+       dates. A ternary chooses the list or a friendly empty state. -->
+  <section class="blog-entries page-section" aria-label="Blog entries, newest first">
+    {posts.length > 0 ? (
+      <ol class="entry-list" role="list">
+        {posts.map((post, index) => (
+          <li>
+            <article>
+              {/* One native link covers the whole card. Its heading gives it a
+                  concise accessible name; there are no nested links/buttons. */}
+              <a class="entry-card" href={post.href} aria-labelledby={`blog-title-${index}`} aria-describedby={`blog-summary-${index}`}>
+                <div class="entry-content">
+                  {/* datetime keeps a machine-readable date while the text uses
+                      a readable month name, with no time-zone day shift. */}
+                  <time class="entry-date" datetime={post.date}>{formatBlogDate(post.date)}</time>
+                  <h2 id={`blog-title-${index}`}>{post.title}</h2>
+                  <p class="entry-summary" id={`blog-summary-${index}`}>{post.summary}</p>
+                  {/* Optional tags remain plain labels rather than extra links. */}
+                  {post.tags && post.tags.length > 0 && (
+                    <ul class="tag-list" aria-label="Entry topics">
+                      {post.tags.map((tag) => <li>{tag}</li>)}
+                    </ul>
+                  )}
+                </div>
+                <span class="read-entry">Read entry <span aria-hidden="true">↗</span></span>
+              </a>
+            </article>
+          </li>
+        ))}
+      </ol>
+    ) : (
+      <div class="content-card empty-state">
+        <h2>Notes are on the way.</h2>
+        <p>Check back for new entries about engineering, projects, and what I’m learning.</p>
+      </div>
+    )}
+  </section>
+</BaseLayout>
+
+<style>
+  /* Scoped styles add to the shared global.css rules without affecting other
+     pages. var() reads colours from whichever theme the visitor has chosen. */
+  .accent {
+    color: var(--color-accent);
+  }
+
+  /* A one-column grid keeps entries in reading order. Removing list markers
+     lets the cards supply the visual structure; the HTML keeps list semantics. */
+  .entry-list {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  /* The preview can shrink with the screen, while the action has its own
+     column. clamp bounds the padding; overflow-wrap handles unusually long text. */
+  .entry-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2rem;
+    padding: clamp(1.5rem, 4vw, 2.5rem);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    overflow-wrap: anywhere;
+  }
+
+  /* display:block places the date on its own line above the entry's title. */
+  .entry-date {
+    display: block;
+    margin-bottom: 0.75rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  /* These h2 headings sit below the page's h1. rem uses the root font size and
+     vw scales with viewport width; clamp keeps the resulting size readable. */
+  .entry-card h2 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: clamp(1.375rem, 2.5vw, 2rem);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  /* ch limits the summary to a comfortable line length based on the font. */
+  .entry-summary {
+    max-width: 65ch;
+    margin: 0.75rem 0 0;
+    color: var(--color-muted);
+  }
+
+  /* The global tag-list rules provide the wrapping pills; this rule only
+     adjusts their spacing inside a blog preview. */
+  .entry-card .tag-list {
+    margin: 1rem 0 0;
+  }
+
+  /* Keep the wording and decorative arrow together at the end of the card. */
+  .read-entry {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: 0.75rem;
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Pointer hover and keyboard focus get the same feedback. The global
+     a:focus-visible rule also supplies a visible outline around the link. */
+  .entry-card:hover,
+  .entry-card:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .entry-card:hover .read-entry,
+  .entry-card:focus-visible .read-entry {
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* On small screens, place the action below the preview instead of squeezing
+     both into the same row. Existing navigation uses its own breakpoint. */
+  @media (max-width: 600px) {
+    .entry-card {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+    }
+
+    .read-entry {
+      justify-self: start;
+    }
+  }
+</style>

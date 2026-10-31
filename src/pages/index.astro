@@ -7,8 +7,11 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
 import PageCloud from "../components/PageCloud.astro";
+import PageHighlight from "../components/PageHighlight.astro";
 // Braces in an import select a named export. This array is discovered from files.
 import { sitePages } from "../lib/site-pages";
+// The highlight's editable content lives separately from its layout and styles.
+import { homeHighlight } from "../lib/home-highlight";
 ---
 
 <!-- A capitalized tag renders an imported component. title="Home" passes a
@@ -24,6 +27,9 @@ import { sitePages } from "../lib/site-pages";
          The self-closing component builds the interactive network of links. -->
     <PageCloud pages={sitePages} />
   </div>
+  <!-- A separate section below the introduction spotlights the page currently
+       being worked on. Pass the whole content object as the component's prop. -->
+  <PageHighlight page={homeHighlight} />
 </BaseLayout>
 
 <style>

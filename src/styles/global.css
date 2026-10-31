@@ -8,7 +8,8 @@
 /* :root selects <html>. Custom properties beginning with -- are inherited,
    so components can reuse this palette and spacing with var(--property-name). */
 :root {
-  /* Colours: hex values describe red, green, and blue. These are the dark defaults. */
+  /* Colours: hex values describe red, green, and blue. These are the dark
+     palette values; the light theme and system-light fallback override them. */
   --color-bg: #1a1a1a;
   /* Tell the browser to use dark native controls and scrollbars too. */
   color-scheme: dark;
@@ -43,6 +44,22 @@
   --color-text: #172033;
   --color-muted: #526078;
   --color-border: #d5dce7;
+}
+
+/* Respect the operating system even when JavaScript is unavailable. :not()
+   limits this fallback to pages without a data-theme attribute, so an explicit
+   light/dark choice always wins. Dark systems use the :root palette above. */
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme]) {
+    color-scheme: light;
+    --border-color: #374151;
+    --color-bg: #f7f8fc;
+    --color-surface: #ffffff;
+    --color-accent: #1d4ed8;
+    --color-text: #172033;
+    --color-muted: #526078;
+    --color-border: #d5dce7;
+  }
 }
 
 /* The universal selector matches every element. Include padding and borders
@@ -124,12 +141,24 @@ a {
   gap: 1rem;
 }
 
-/* Keep the links and theme switch together with responsive spacing. */
+/* Keep navigation links together with responsive spacing. An automatic start
+   margin absorbs spare room, pushing the links and following controls right. */
 .nav-links {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
   gap: clamp(1rem, 3vw, 2rem);
+  margin-inline-start: auto;
+}
+
+/* Keep the theme button immediately before the menu button in a separate group.
+   Because this group is outside .nav-links, collapsing the menu cannot hide it.
+   flex-shrink: 0 preserves both controls' tap targets when space is limited. */
+.nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-shrink: 0;
 }
 
 /* The menu button starts hidden. The narrow-screen rules show it once
@@ -173,14 +202,22 @@ a {
     padding-block: 1rem;
   }
 
+  /* Keep the controls against the right edge of the first row, beside the logo. */
+  .nav-actions {
+    margin-inline-start: auto;
+  }
+
   /* :not() excludes hidden controls. A space selects a descendant element. */
   .menu-ready .nav-toggle:not([hidden]) {
     display: inline-flex;
   }
 
-  /* Occupy a full flex row, then stack the links and stretch their hit areas. */
+  /* order changes the visual flex order: links move below the logo and controls.
+     Occupy that full second row, stack the links, and stretch their hit areas. */
   .site-nav .nav-links {
+    order: 1;
     flex-basis: 100%;
+    margin-inline-start: 0;
     flex-direction: column;
     align-items: stretch;
     gap: 0.25rem;
@@ -204,64 +241,47 @@ a {
   }
 }
 
-/* The label wraps a real checkbox and a CSS-drawn switch. Only display it
-   after the script removes hidden; position: relative anchors the input. */
+/* This native button works with pointer, Enter, and Space. Only display it
+   after JavaScript removes hidden, so an inactive control is never offered.
+   Equal dimensions make a comfortable tap target around the smaller icon. */
 .theme-toggle:not([hidden]) {
   display: inline-flex;
   align-items: center;
-  position: relative;
-  gap: 0.5rem;
-  min-height: 44px;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
   cursor: pointer;
-  font-size: 1.0rem;
   color: var(--color-muted);
 }
 
-/* Visually conceal the native checkbox while keeping it focusable and
-   associated with its label. display: none would remove keyboard access. */
-.theme-toggle input {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  opacity: 0;
+/* SVG icons scale cleanly. Start with both hidden, then show the destination
+   theme: a moon to switch to dark mode, or a sun to switch to light mode. */
+.theme-toggle svg {
+  display: none;
+  width: 24px;
+  height: 24px;
 }
 
-/* The pill-shaped track. A very large radius rounds both ends fully. */
-.theme-track {
+/* The attribute lives on <html>; the space selects the matching icon anywhere
+   inside it. JavaScript updates data-theme when the visitor changes mode. */
+:root[data-theme="light"] .theme-toggle .moon-icon,
+:root[data-theme="dark"] .theme-toggle .sun-icon {
   display: block;
-  width: 48px;
-  height: 28px;
-  padding: 3px;
-  border: 1px solid var(--color-muted);
-  border-radius: 999px;
+}
+
+/* Give pointer users feedback without shifting the surrounding navigation. */
+.theme-toggle:hover {
   background: var(--color-surface);
+  color: var(--color-text);
 }
 
-/* ::before creates a decorative pseudo-element: the switch's round thumb.
-   content: "" creates it without adding any text or extra HTML. */
-.theme-track::before {
-  content: "";
-  display: block;
-  width: 20px;
-  height: 20px;
-  border-radius: 50%; /* Equal width and height plus 50% makes a circle. */
-  background: var(--color-muted);
-}
-
-/* :checked matches a checked checkbox; + selects its immediate next sibling. */
-.theme-toggle input:checked + .theme-track {
-  background: var(--color-accent);
-  border-color: var(--color-accent);
-}
-
-/* Slide the thumb to the other side and give it contrast against the accent. */
-.theme-toggle input:checked + .theme-track::before {
-  transform: translateX(20px);
-  background: var(--color-on-accent);
-}
-
-/* Show focus on the visible track even though the focused input is concealed. */
-.theme-toggle input:focus-visible + .theme-track {
+/* Keep a clear keyboard focus indicator on the visible button itself. */
+.theme-toggle:focus-visible {
   outline: 2px solid var(--color-text);
   outline-offset: 4px;
 }

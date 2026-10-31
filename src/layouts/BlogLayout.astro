@@ -1,0 +1,217 @@
+---
+// Markdown entries use this layout to share one document, heading, and style.
+// BaseLayout supplies the navigation, theme control, metadata, and footer.
+import BaseLayout from "./BaseLayout.astro";
+// A type-only import checks the metadata without adding runtime JavaScript.
+import type { BlogFrontmatter } from "../lib/blog";
+import { formatBlogDate } from "../lib/blog";
+
+// Astro passes a Markdown file's YAML metadata as the frontmatter prop.
+interface Props {
+  frontmatter: BlogFrontmatter;
+}
+
+// Destructuring extracts the fields. = [] supplies an empty array when tags
+// is omitted, so the template can always check its length safely.
+const { title, summary, date, tags = [] } = Astro.props.frontmatter;
+const dateLabel = formatBlogDate(date);
+// Remove a final slash before adding /blog, including when the base is just /.
+const blogHref = `${import.meta.env.BASE_URL.replace(/\/$/, "")}/blog`;
+---
+
+<!-- Braces pass each entry's values into the shared page metadata. -->
+<BaseLayout title={title} description={summary}>
+  <!-- article marks this entry as a self-contained piece of writing. -->
+  <article class="blog-article">
+    <a class="back-link text-link" href={blogHref}><span aria-hidden="true">←</span> Back to the blog</a>
+
+    <header class="post-heading">
+      <!-- time provides a machine-readable date alongside the readable label.
+           aria-hidden keeps decorative arrows in the links out of spoken text. -->
+      <p class="eyebrow"><time datetime={date}>{dateLabel}</time></p>
+      <h1>{title}</h1>
+      <p class="post-summary">{summary}</p>
+      <!-- && includes this list only when it has entries. map transforms every
+           tag string into one list item; tags are labels rather than links. -->
+      {tags.length > 0 && (
+        <ul class="tag-list" aria-label="Entry topics">
+          {tags.map((tag) => <li>{tag}</li>)}
+        </ul>
+      )}
+    </header>
+
+    <div class="post-body">
+      <!-- Astro turns the Markdown body into HTML and inserts it into this slot.
+           The entry's title is already h1, so its own sections can start at ##. -->
+      <slot />
+    </div>
+
+    <footer class="post-footer">
+      <a class="text-link" href={blogHref}><span aria-hidden="true">←</span> All blog entries</a>
+    </footer>
+  </article>
+</BaseLayout>
+
+<style>
+  /* ch follows the approximate width of a zero character, giving prose a
+     readable line length. anywhere lets long words/URLs wrap on small screens. */
+  .blog-article {
+    max-width: 75ch;
+    min-width: 0;
+    margin-block: 2rem 5rem;
+    overflow-wrap: anywhere;
+  }
+
+  /* The return link stays quieter than the entry title. rem uses root font size. */
+  .back-link {
+    margin-bottom: 2rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  /* Theme variables keep the divider consistent in both light and dark modes. */
+  .post-heading {
+    padding-bottom: 2rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+
+  /* clamp sets a minimum, viewport-responsive preference, and maximum font size.
+     Unitless line-height scales with the text; em spacing follows its font size. */
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .post-summary {
+    margin-block: 1.5rem;
+    color: var(--color-muted);
+    font-size: 1.125rem;
+  }
+
+  /* The shared tag-list styles draw the pills; this rule controls only spacing. */
+  .tag-list {
+    margin-block: 1.5rem 0;
+  }
+
+  .post-body {
+    padding-block: 1rem 2rem;
+    line-height: 1.8;
+  }
+
+  /* Markdown creates HTML outside this file's automatic CSS scope. :global()
+     reaches that HTML, while .post-body still limits each rule to this entry. */
+  .post-body :global(h2),
+  .post-body :global(h3) {
+    margin-block: 2rem 0.75rem;
+    color: var(--color-text);
+    line-height: 1.3;
+    scroll-margin-top: 2rem;
+  }
+
+  .post-body :global(h2) {
+    font-size: 1.5rem;
+  }
+
+  .post-body :global(h3) {
+    font-size: 1.25rem;
+  }
+
+  /* Commas share declarations across paragraphs and both kinds of lists. */
+  .post-body :global(p),
+  .post-body :global(ul),
+  .post-body :global(ol) {
+    margin-block: 1rem;
+    color: var(--color-muted);
+  }
+
+  .post-body :global(ul),
+  .post-body :global(ol) {
+    padding-inline-start: 1.5rem;
+  }
+
+  .post-body :global(li) {
+    margin-block: 0.35rem;
+  }
+
+  /* Underlines identify links without relying on colour alone. The shared
+     a:focus-visible rule also supplies their keyboard focus indicator. */
+  .post-body :global(a) {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* A left divider separates a quotation from the surrounding paragraphs. */
+  .post-body :global(blockquote) {
+    margin: 1.5rem 0;
+    padding-inline-start: 1.25rem;
+    border-inline-start: 3px solid var(--color-accent);
+    font-style: italic;
+  }
+
+  /* Monospace gives every character equal width, useful for code examples. */
+  .post-body :global(code) {
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    background: var(--color-surface);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.875em;
+  }
+
+  /* Fenced code blocks preserve whitespace. Horizontal scrolling contains long
+     code lines instead of making the whole page wider than the viewport. */
+  .post-body :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    line-height: 1.6;
+  }
+
+  /* The pre box already supplies padding/background, so its code needs neither. */
+  .post-body :global(pre code) {
+    padding: 0;
+    background: transparent;
+  }
+
+  /* Let images shrink to the text column while retaining their proportions. */
+  .post-body :global(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
+  }
+
+  /* A table can scroll within the article on a narrow screen. collapse merges
+     adjacent cell borders into one line rather than drawing them twice. */
+  .post-body :global(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-block: 1.5rem;
+    border-collapse: collapse;
+  }
+
+  .post-body :global(th),
+  .post-body :global(td) {
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--color-border);
+    text-align: start;
+  }
+
+  /* hr is Markdown's horizontal rule; the footer uses the same divider colour. */
+  .post-body :global(hr) {
+    margin-block: 2rem;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .post-footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+</style>

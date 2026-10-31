@@ -1,0 +1,141 @@
+---
+// A type-only import helps the editor check our data without adding browser JS.
+// The actual highlighted title, summary, and link live in lib/home-highlight.ts.
+import type { HomeHighlight } from "../lib/home-highlight";
+
+// Props describes this component's inputs. The home page passes its chosen
+// highlight with <PageHighlight page={homeHighlight} />.
+interface Props {
+  page: HomeHighlight;
+}
+
+// Destructuring extracts the page prop so the template can read its properties.
+const { page } = Astro.props;
+---
+
+<!-- A labelled section gives this part of the home page its own heading.
+     h2 follows the introduction's h1; the featured page title is an h3. -->
+<section class="page-highlight" aria-labelledby="page-highlight-heading">
+  <div class="highlight-heading">
+    <p class="eyebrow">Latest update</p>
+    <h2 id="page-highlight-heading">What I’m working on</h2>
+  </div>
+
+  <!-- The entire card is one native link, so it works without browser scripts.
+       Braces insert the selected page's values. The matching IDs provide a
+       concise link name and a separate description for assistive technology. -->
+  <a class="highlight-card" href={page.href} aria-labelledby="page-highlight-title" aria-describedby="page-highlight-summary">
+    <div class="highlight-content">
+      <p class="highlight-category">{page.category}</p>
+      <h3 id="page-highlight-title">{page.title}</h3>
+      <p class="highlight-summary" id="page-highlight-summary">{page.summary}</p>
+    </div>
+    <!-- This call to action belongs to the same link, rather than nesting a
+         second link or button. The arrow is decoration, not extra spoken text. -->
+    <span class="highlight-read">Read the page <span aria-hidden="true">↗</span></span>
+  </a>
+</section>
+
+<style>
+  /* Astro scopes these styles to this component. margin-block adds space after
+     the section; rem follows the root font size rather than a fixed pixel size. */
+  .page-highlight {
+    margin-block: 0 5rem;
+  }
+
+  /* Keep a clear gap between the section introduction and its featured card. */
+  .highlight-heading {
+    margin-bottom: 1.5rem;
+  }
+
+  /* clamp(minimum, preferred, maximum) scales the heading with viewport width.
+     A unitless line-height stays proportional as the font size changes. */
+  h2 {
+    margin: 0;
+    font-size: clamp(1.5rem, 3vw, 2.25rem);
+    line-height: 1.2;
+    letter-spacing: -0.025em;
+  }
+
+  /* Grid gives the preview flexible space and keeps the call to action beside
+     it. minmax(0, 1fr) lets long content shrink within the available width.
+     var() reads shared colours/radii so the card follows light and dark themes. */
+  .highlight-card {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 2rem;
+    padding: clamp(1.5rem, 4vw, 3rem);
+    border: 1px solid var(--color-border);
+    border-inline-start: 3px solid var(--color-accent);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    overflow-wrap: anywhere;
+  }
+
+  /* A small uppercase label identifies the kind of page being highlighted.
+     em spacing is relative to this label's own font size. */
+  .highlight-category {
+    margin: 0 0 0.75rem;
+    color: var(--color-accent);
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  /* The title is prominent without competing with the home page's main h1. */
+  h3 {
+    margin: 0;
+    color: var(--color-text);
+    font-size: clamp(1.375rem, 2.5vw, 2rem);
+    line-height: 1.25;
+    letter-spacing: -0.02em;
+  }
+
+  /* ch approximates a character's width, keeping the preview easy to scan. */
+  .highlight-summary {
+    max-width: 65ch;
+    margin: 0.75rem 0 0;
+    color: var(--color-muted);
+  }
+
+  /* An inline flex row keeps the wording and arrow together. justify-self
+     aligns this grid item to the right on wider screens. */
+  .highlight-read {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    gap: 0.75rem;
+    color: var(--color-text);
+    font-size: 0.9375rem;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  /* Give pointer and keyboard visitors the same accent feedback. The shared
+     a:focus-visible rule in global.css also supplies a clear focus outline. */
+  .highlight-card:hover,
+  .highlight-card:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .highlight-card:hover .highlight-read,
+  .highlight-card:focus-visible .highlight-read {
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  /* A media query changes the card to one column on narrow screens, placing
+     its call to action below the preview instead of squeezing the text. */
+  @media (max-width: 600px) {
+    .highlight-card {
+      grid-template-columns: minmax(0, 1fr);
+      gap: 1.25rem;
+    }
+
+    .highlight-read {
+      justify-self: start;
+    }
+  }
+</style>

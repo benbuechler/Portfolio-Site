@@ -1,6 +1,6 @@
 # Ben's portfolio: a guide to the code
 
-This Astro portfolio has a home page, projects, contact information, and
+This Astro portfolio has a home page, projects, a blog, contact information, and
 experience stories. Source comments explain the HTML, CSS, JavaScript,
 TypeScript, and Astro features used throughout the project.
 
@@ -24,6 +24,40 @@ TypeScript, and Astro features used throughout the project.
    with 3D coordinates, canvas drawing, custom elements, and pointer events.
 8. Read [the page-cloud tests](src/lib/page-cloud.test.ts) to see how assertions
    check the hierarchy and screen positions across rotations and viewport sizes.
+
+## Changing the home-page highlight
+
+Edit [home-highlight.ts](src/lib/home-highlight.ts) to choose the page you are
+currently working on. Set its `title`, `summary`, `category`, and `href` (the
+page URL, such as `/experience/building-this-portfolio`). The
+[PageHighlight component](src/components/PageHighlight.astro) renders that
+content below the home-page introduction. You choose this feature manually;
+changing another file does not automatically replace it.
+
+## Writing blog entries
+
+The blog lives at `/blog`. Each entry is a Markdown file in `src/pages/blog/`,
+using the same file-based approach as the experience stories.
+
+1. Copy [the entry template](src/pages/blog/_template.md) to a new file in the
+   same folder, for example `my-first-project.md`.
+2. Set `title`, `summary`, and `date` in its YAML frontmatter. Keep the date
+   quoted in `"YYYY-MM-DD"` format, such as `"2026-10-31"`. `tags` is optional.
+3. Keep the `layout` value unchanged so your entry uses the shared blog layout.
+4. Replace the Markdown below the second `---` line with your writing. Use `##`
+   for section headings; the layout supplies the page's main heading.
+5. Save the file. It appears at `/blog/my-first-project`, on the blog index,
+   and in the home-page cloud. The index sorts entries by date, newest first.
+
+Keep a filename prefixed with `_` while drafting (for example `_my-first-project.md`).
+Astro excludes those files from page routes, and the blog index and page cloud
+exclude them too. Remove the prefix when you want the entry included in the site.
+The template itself stays excluded. Dates control ordering, not scheduled publishing.
+
+[The starter entry](src/pages/blog/starting-this-blog.md) is ready to edit.
+[BlogLayout](src/layouts/BlogLayout.astro) styles individual entries,
+[blog.astro](src/pages/blog.astro) builds the index, and
+[blog.ts](src/lib/blog.ts) shares their types and date formatting.
 
 ## How a page reaches the browser
 
@@ -101,6 +135,13 @@ Global styles apply throughout the document. Component `<style>` blocks are
 scoped to the component's markup; `:global(...)` opts a selector out of that
 scoping. Theme switching overrides colour variables on `<html>` so components
 can share the same rules in both themes.
+
+The site follows the visitor's system theme until they choose a mode with the
+sun/moon button. A moon offers dark mode while the site is light; a sun offers
+light mode while it is dark. The tooltip describes the same action.
+Explicit choices are saved in `localStorage`
+for later pages and visits. Without a saved choice, system theme changes are
+also applied while the page is open; CSS supplies the system default without JS.
 
 ## Files outside `src/`
 

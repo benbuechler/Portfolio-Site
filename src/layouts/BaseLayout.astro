@@ -25,8 +25,10 @@ const {
 const navigation = [
   { href: "/", label: "Home" },
   { href: "/projects", label: "Projects" },
-  { href: "/contact", label: "Contact" },
   { href: "/experience", label: "Experience" },
+  { href: "/blog", label: "Blog" },
+  { href: "/contact", label: "Contact" },
+
 ];
 // pathname is the URL path without a query string. /\/$/ is a regular expression
 // matching a slash at the end; removing it makes /projects and /projects/ agree.
@@ -48,7 +50,8 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     <!-- is:inline tells Astro to leave this script in place without bundling it.
          In the head, it can set the theme before the browser draws the body. -->
     <script is:inline>
-      // Apply the preference before rendering to avoid a flash of the wrong theme.
+      // Default to the visitor's system theme before the first paint, avoiding
+      // a flash of the wrong colours. Only an explicit saved choice overrides it.
       // let declares a variable we can assign later. It starts as undefined.
       let savedTheme;
       try {
@@ -81,19 +84,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
       <!-- nav identifies a navigation landmark; aria-label gives it a useful name. -->
       <nav class="site-nav" aria-label="Main navigation">
         <a class="logo" href="/" aria-label="Ben Buechler home">BB<span>.</span></a>
-        <!-- hidden keeps the button out of the interface until JS enables it.
-             aria-controls names the element it opens; aria-expanded stores state.
-             type="button" prevents accidental form submission if reused in a form. -->
-        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu" hidden>
-          <!-- SVG draws scalable icons. viewBox supplies the coordinate system;
-               currentColor inherits the button's text colour. The two paths draw
-               the menu and close icons, and CSS chooses which one is visible.
-               aria-hidden avoids repeating the button's accessible label. -->
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
-            <path class="menu-icon" d="M4 6h16M4 12h16M4 18h16" />
-            <path class="close-icon" d="m6 6 12 12M6 18 18 6" />
-          </svg>
-        </button>
         <div class="nav-links" id="nav-links">
           <!-- map returns one anchor per object. ({ href, label }) destructures
                each object; the arrow function's parentheses return its markup.
@@ -106,15 +96,38 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
               {label}
             </a>
           ))}
-          <!-- A real checkbox provides keyboard support; role="switch" describes
-               its on/off meaning. The label also makes its surrounding text
-               clickable. CSS draws the decorative track beside the input. -->
-          <label class="theme-toggle" hidden>
-            <span>Light</span>
-            <input id="theme-toggle" type="checkbox" role="switch" aria-label="Dark mode" />
-            <span class="theme-track" aria-hidden="true"></span>
-            <span>Dark</span>
-          </label>
+        </div>
+        <!-- Keep both controls outside the collapsible links. On small screens,
+             CSS places this group beside the logo and the links on a new row,
+             so changing the theme never requires opening the menu first. -->
+        <div class="nav-actions">
+          <!-- A native button works with mouse, touch, Enter, and Space. CSS
+               shows the action: a moon in light mode offers dark mode, while a
+               sun in dark mode offers light mode. The script updates the
+               accessible label and tooltip to describe that same action;
+               aria-hidden keeps the decorative SVGs out of that label. -->
+          <button id="theme-toggle" class="theme-toggle" type="button" aria-label="Switch to dark mode" title="Switch to dark mode" hidden>
+            <svg class="sun-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <circle cx="12" cy="12" r="4" />
+              <path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.93 4.93l1.42 1.42m11.3 11.3 1.42 1.42M4.93 19.07l1.42-1.42m11.3-11.3 1.42-1.42" />
+            </svg>
+            <svg class="moon-icon" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79Z" />
+            </svg>
+          </button>
+          <!-- hidden keeps the button out of the interface until JS enables it.
+               aria-controls names the element it opens; aria-expanded stores state.
+               type="button" prevents accidental form submission if reused in a form. -->
+          <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu" hidden>
+            <!-- SVG draws scalable icons. viewBox supplies the coordinate system;
+                 currentColor inherits the button's text colour. The two paths draw
+                 the menu and close icons, and CSS chooses which one is visible.
+                 aria-hidden avoids repeating the button's accessible label. -->
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+              <path class="menu-icon" d="M4 6h16M4 12h16M4 18h16" />
+              <path class="close-icon" d="m6 6 12 12M6 18 18 6" />
+            </svg>
+          </button>
         </div>
       </nav>
     </header>
@@ -192,8 +205,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         });
       }
 
-      // This second interaction connects the checkbox to the theme chosen above.
-      const toggle = document.querySelector<HTMLInputElement>("#theme-toggle");
+      // Connect the icon button to the theme selected by the early head script.
+      // CSS reads data-theme to show the icon for the mode a click will select.
+      const toggle = document.querySelector<HTMLButtonElement>("#theme-toggle");
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
       // let is used because choosing a theme changes this value later.
       let hasPreference = false;
@@ -205,13 +219,20 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
       } catch {}
 
       if (toggle) {
-        // checked is the checkbox's boolean state, independent of its HTML text.
-        toggle.checked = document.documentElement.dataset.theme === "dark";
-        // closest walks up to the surrounding label; reveal it when JS is ready.
-        toggle.closest("label")?.removeAttribute("hidden");
-        toggle.addEventListener("change", () => {
-          const theme = toggle.checked ? "dark" : "light";
+        // A union type allows only these two strings. Keep the colours, icon,
+        // screen-reader label, and hover tooltip in sync whenever a theme changes.
+        const setTheme = (theme: "light" | "dark") => {
           document.documentElement.dataset.theme = theme;
+          const action = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
+          toggle.setAttribute("aria-label", action);
+          toggle.setAttribute("title", action);
+        };
+
+        setTheme(document.documentElement.dataset.theme === "dark" ? "dark" : "light");
+        // Reveal the control only after its label and event handler are ready.
+        toggle.addEventListener("click", () => {
+          const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+          setTheme(theme);
           hasPreference = true;
           try {
             // Save a deliberate choice so it wins over later system changes.
@@ -222,10 +243,10 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         // Follow system changes only until the visitor chooses their own theme.
         systemTheme.addEventListener("change", ({ matches }) => {
           if (!hasPreference) {
-            document.documentElement.dataset.theme = matches ? "dark" : "light";
-            toggle.checked = matches;
+            setTheme(matches ? "dark" : "light");
           }
         });
+        toggle.hidden = false;
       }
     </script>
   </body>
