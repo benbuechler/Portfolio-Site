@@ -1,7 +1,12 @@
 ---
+// This file produces /contact. Astro evaluates this frontmatter at build time;
+// the visitor receives the resulting HTML rather than this data-processing code.
 import BaseLayout from "../layouts/BaseLayout.astro";
 
 // Add your profile URLs here. Cards become links once a URL is provided.
+// This array contains objects: each { } groups related key: value properties.
+// TypeScript infers their string types from the values, without an interface.
+// Use a full profile URL, or "mailto:you@example.com" for the email href.
 const profiles = [
   { name: "LinkedIn", description: "Professional experience, education, and connections.", href: "" },
   { name: "GitHub", description: "Source code, experiments, and project repositories.", href: "" },
@@ -9,7 +14,10 @@ const profiles = [
 ];
 ---
 
+<!-- BaseLayout renders this content inside its slot and uses these props for
+     the browser-tab title and search-engine description. -->
 <BaseLayout title="Contact" description="Connect with Ben Buechler through professional profiles and email.">
+  <!-- header introduces this page; h1 gives it a single primary heading. -->
   <header class="page-heading">
     <p class="eyebrow">Contact</p>
     <h1>Let’s connect.</h1>
@@ -19,13 +27,22 @@ const profiles = [
     </p>
   </header>
 
+  <!-- aria-label gives the section a descriptive accessible name. The shared
+       card-grid class in global.css handles responsive rows and columns. -->
   <section class="card-grid" aria-label="Professional profiles and contact information">
+    <!-- map returns a card for each object. Destructuring ({ ... }) extracts
+         its fields, and the arrow function implicitly returns the (...) markup. -->
     {profiles.map(({ name, description, href }) => (
       <article class="content-card">
         <h2>{name}</h2>
         <p>{description}</p>
+        {/* A ternary chooses one branch: a non-empty href creates a link,
+            while an empty string is falsy and selects the status paragraph. */}
         {href ? (
           <a class="text-link" href={href}>
+            {/* === compares values without converting their types. Backticks
+                create a template literal: ${name} inserts the current name.
+                aria-hidden marks the adjacent arrow as decoration. */}
             {name === "Email" ? "Send an email" : `Visit ${name}`} <span aria-hidden="true">↗</span>
           </a>
         ) : (

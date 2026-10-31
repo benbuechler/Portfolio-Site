@@ -1,8 +1,14 @@
 
 {
+  // .jsonc means JSON with comments. Wrangler reads this deployment config.
+  // This name identifies the Cloudflare Worker that serves the static assets.
   "name": "ben-portfolio",
+  // Select Cloudflare runtime compatibility behavior as of this date; this
+  // is a configuration setting, not the date when the site was last changed.
   "compatibility_date": "2026-10-29",
   "assets": {
+    // Astro writes the production HTML/CSS/JS here when npm run build succeeds.
+    // ./ means the directory is relative to this configuration file.
     "directory": "./dist"
   }
 }

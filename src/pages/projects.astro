@@ -1,19 +1,28 @@
 ---
+// Astro turns this filename into /projects. Frontmatter runs while building
+// the page; BaseLayout supplies the shared document, navigation, and footer.
 import BaseLayout from "../layouts/BaseLayout.astro";
 
+// An interface describes an object's shape for TypeScript and the editor.
+// It checks your code during development; it does not create a runtime object.
 interface Project {
   title: string;
   summary: string;
-  tools: string[];
-  href?: string;
+  tools: string[]; // [] after a type means an array of that type.
+  href?: string; // ? makes this property optional: a project can omit a link.
 }
 
 // Add a project for each piece of work you want to showcase.
 // Include its goal, your contribution, and the results in the summary.
+// const prevents reassigning the variable; : Project[] checks each array entry.
+// [] is currently empty, so the template below shows its placeholder message.
 const projects: Project[] = [];
 ---
 
+<!-- Component attributes pass props. The description becomes page metadata. -->
 <BaseLayout title="Projects" description="Explore Ben Buechler’s electrical engineering projects, process, and results.">
+  <!-- Semantic tags describe the content's purpose. h1 is the page heading;
+       the span lets CSS colour only the full stop without changing the wording. -->
   <header class="page-heading">
     <p class="eyebrow">Projects</p>
     <h1>Ideas put into practice<span class="accent">.</span></h1>
@@ -23,19 +32,29 @@ const projects: Project[] = [];
     </p>
   </header>
 
+  <!-- aria-labelledby points to the heading's id to name this section for
+       assistive technology. Classes can repeat; an id should be unique per page. -->
   <section aria-labelledby="project-list-heading" class="page-section">
     <h2 id="project-list-heading">My projects</h2>
+    <!-- { } evaluates an expression. condition ? first : second is a ternary:
+         render a card grid when the array has entries, otherwise the empty state. -->
     {projects.length > 0 ? (
       <div class="card-grid">
+        {/* map transforms each project into markup. ({ ... }) destructures its
+            properties into local names; => introduces an arrow function. */}
         {projects.map(({ title, summary, tools, href }) => (
           <article class="content-card">
             <h3>{title}</h3>
             <p>{summary}</p>
+            {/* && renders the list only when there is at least one tool.
+                ul/li describe an unordered list; map creates one item per tool. */}
             {tools.length > 0 && (
               <ul class="tag-list" aria-label="Tools and technologies">
                 {tools.map((tool) => <li>{tool}</li>)}
               </ul>
             )}
+            {/* A missing/empty href is falsy, so it creates no link. The arrow
+                is decorative; aria-hidden keeps it out of screen-reader text. */}
             {href && <a class="text-link" href={href}>Explore project <span aria-hidden="true">→</span></a>}
           </article>
         ))}
@@ -54,6 +73,8 @@ const projects: Project[] = [];
 </BaseLayout>
 
 <style>
+  /* Scoped to this page. var() reads the colour set in global.css, so this
+     accent follows whichever theme BaseLayout selects. */
   .accent {
     color: var(--color-accent);
   }

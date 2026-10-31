@@ -1,32 +1,59 @@
 
 ---
+// This file becomes the home route, "/", because it is pages/index.astro.
+// Between the --- fences is Astro's frontmatter: code that prepares HTML at
+// build time in this static site. It does not run in the visitor's browser.
+// A default import chooses a local name for another file's exported component.
 import BaseLayout from "../layouts/BaseLayout.astro";
 import Header from "../components/Header.astro";
 import PageCloud from "../components/PageCloud.astro";
+// Braces in an import select a named export. This array is discovered from files.
 import { sitePages } from "../lib/site-pages";
 ---
 
+<!-- A capitalized tag renders an imported component. title="Home" passes a
+     prop (an input); everything inside BaseLayout fills its <slot />. -->
 <BaseLayout title="Home">
+  <!-- Classes connect this structure to the scoped CSS below. A div is a
+       neutral grouping element; Header supplies the actual heading and text. -->
   <div class="home-hero">
-    <PageCloud pages={sitePages} />
     <div class="hero-content">
       <Header />
     </div>
+    <!-- Braces pass the array itself, rather than the text "sitePages".
+         The self-closing component builds the interactive network of links. -->
+    <PageCloud pages={sitePages} />
   </div>
 </BaseLayout>
 
 <style>
+  /* Astro scopes this CSS to markup in this component. Grid puts the introduction
+     and page cloud in two equal columns; minmax(0, 1fr) lets either shrink
+     below its content's default minimum width without forcing overflow. */
   .home-hero {
-    position: relative;
-    isolation: isolate;
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
     align-items: center;
-    min-height: clamp(32rem, 75svh, 54rem);
+    gap: clamp(2rem, 4vw, 4rem); /* Minimum, fluid preferred gap, maximum. */
+    min-height: clamp(32rem, 75svh, 54rem); /* svh follows the small viewport height. */
+    /* Block start/end are top/bottom here. rem follows the root font size. */
     padding-block: clamp(2rem, 5vw, 5rem) clamp(3rem, 7vw, 6rem);
   }
 
+  /* Keep the introductory text from getting too wide on large displays. */
   .hero-content {
     width: 100%;
     max-width: 48rem;
+  }
+
+  /* At this breakpoint, stack both children in one column. Removing the minimum
+     height lets their content determine how tall the section needs to be. */
+  @media (max-width: 1100px) {
+    .home-hero {
+      grid-template-columns: minmax(0, 1fr);
+      align-items: stretch;
+      min-height: 0;
+      gap: 2rem;
+    }
   }
 </style>

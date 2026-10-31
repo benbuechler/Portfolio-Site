@@ -1,209 +1,727 @@
 ---
-import { createPageCloud, layoutPageCloud } from "../lib/page-cloud";
+// Astro frontmatter runs while rendering HTML (at build time for this static
+// site), rather than in the visitor's browser. Imports reuse code from other files.
+import { createPageCloud } from "../lib/page-cloud";
+// `import type` is used by TypeScript checking and produces no runtime code.
 import type { SitePage } from "../lib/site-pages";
 
+// Props describes the inputs a parent passes to <PageCloud>. `SitePage[]` means
+// an array of objects that each follow the shared SitePage type.
 interface Props {
   pages: SitePage[];
 }
 
+// Object destructuring pulls named properties into local variables. The parent
+// supplies pages, and createPageCloud prepares the initial navigation link data.
 const { pages } = Astro.props;
-const { nodes, connections, extent } = createPageCloud(pages);
-const initialPositions = layoutPageCloud(nodes, extent, 1000, 600);
+const { nodes } = createPageCloud(pages);
 ---
 
-<page-cloud data-pages={JSON.stringify(pages)} aria-hidden="true">
-  <svg class="cloud-fallback" viewBox="0 0 1000 600" preserveAspectRatio="none">
-    {connections.map(([from, to]) => (
-      <line x1={initialPositions[from].x} y1={initialPositions[from].y} x2={initialPositions[to].x} y2={initialPositions[to].y} />
-    ))}
-    {initialPositions.map((point, index) => (
-      <g>
-        <circle cx={point.x} cy={point.y} r="5" />
-        <text x={point.x + 14} y={point.y + 4}>{pages[index].label}</text>
-      </g>
-    ))}
-  </svg>
-  <canvas></canvas>
+<!--
+  This custom element becomes interactive when its class is registered below.
+  data-* attributes store our own data on HTML elements. JSON.stringify converts
+  the array into text; Astro safely writes it into this attribute, and the browser
+  reads it back through dataset.pages. role and aria-label give this region an
+  accessible name for people using assistive technology.
+-->
+<page-cloud data-pages={JSON.stringify(pages)} role="region" aria-label="Explore the portfolio">
+  <div class="cloud-heading">
+    <span>Explore the site</span>
+    <!-- hidden keeps a control unavailable until its script is ready.
+         type="button" prevents accidental submission inside a surrounding form. -->
+    <button class="cloud-reset" type="button" hidden>
+      <!-- SVG draws the reset icon with a path. viewBox defines its coordinates;
+           currentColor follows the button's CSS text color. The adjacent words
+           already name the button, so aria-hidden hides this decorative icon. -->
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M3 11a9 9 0 1 1 2.6 7M3 4v7h7" />
+      </svg>
+      Reset view
+    </button>
+  </div>
+  <!-- aria-describedby connects the map to the instructions with that id. -->
+  <div class="cloud-viewport" role="group" aria-label="Rotate the 3D site map" aria-describedby="cloud-instructions">
+    <!-- Canvas is a bitmap drawing surface for dots and lines. The links stay
+         ordinary HTML so they retain names, destinations, and keyboard access. -->
+    <canvas aria-hidden="true"></canvas>
+    <nav class="cloud-links" aria-label="Site map pages">
+      <!-- Braces evaluate JavaScript in the template. map creates one anchor per
+           node; index associates it with the drawing data. href is its destination.
+           draggable="false" disables native link dragging for our rotation gesture. -->
+      {nodes.map((node, index) => (
+        <a class="cloud-link" href={node.href} data-node={index} aria-label={pages[index].label} draggable="false">
+          {node.label}
+        </a>
+      ))}
+    </nav>
+  </div>
+  <!-- CSS switches between desktop/touch hints. sr-only supplies extra details
+       to screen readers; the arrow buttons each have an explicit accessible name. -->
+  <div class="cloud-controls" hidden>
+    <p class="cloud-help" id="cloud-instructions">
+      <span class="desktop-help">Drag to rotate · Select a page</span>
+      <span class="touch-help">Swipe sideways to spin · Tap a page</span>
+      <span class="sr-only">Focus the map and use the arrow keys to rotate, or use the rotation buttons. Press Home to reset the view. Tab to a page link and press Enter to visit it.</span>
+    </p>
+    <div class="rotation-buttons" role="group" aria-label="Rotate map">
+      <button type="button" data-rotate="left" aria-label="Rotate map left">←</button>
+      <button type="button" data-rotate="up" aria-label="Tilt map up">↑</button>
+      <button type="button" data-rotate="down" aria-label="Tilt map down">↓</button>
+      <button type="button" data-rotate="right" aria-label="Rotate map right">→</button>
+    </div>
+  </div>
 </page-cloud>
 
+<!-- This script runs in the browser. Astro converts its TypeScript to JavaScript
+     and bundles the imports, unlike the build-time frontmatter above. -->
 <script>
-  import { createPageCloud, layoutPageCloud } from "../lib/page-cloud";
+  import { createPageCloud, layoutPageCloud, DEFAULT_CLOUD_ROTATION } from "../lib/page-cloud";
 
+  // `extends` inherits standard HTML element behavior. The custom element keeps
+  // this map's setup and teardown alongside the <page-cloud> that owns them.
   class PageCloud extends HTMLElement {
+    // TypeScript's private marks an internal class member. `?` allows undefined;
+    // `() => void` describes a function with no arguments or return value.
     private cleanup?: () => void;
 
+    // The browser calls this lifecycle method when the element joins the page.
+    // `this` refers to this <page-cloud>; the guard avoids installing handlers twice.
     connectedCallback() {
       if (this.cleanup) return;
+      // Query this element's descendants. The <HTMLElement> generic tells
+      // TypeScript which kind of result we expect, without changing the DOM.
+      const viewport = this.querySelector<HTMLElement>(".cloud-viewport");
       const canvas = this.querySelector("canvas");
-      if (!canvas) return;
-      const context = canvas.getContext("2d");
-      if (!context) return;
+      // Optional chaining (?.) calls getContext only if canvas exists. A 2D
+      // context exposes commands for drawing shapes onto the bitmap.
+      const context = canvas?.getContext("2d");
+      // `!` means "not" and `||` means "or". Stop if any required piece is absent;
+      // the HTML navigation links will still work without the interactive diagram.
+      if (!viewport || !canvas || !context) return;
 
+      // The annotation describes an array of href/label objects. JSON.parse turns
+      // saved text back into data. `??` supplies "[]" only for null/undefined;
+      // TypeScript's annotation does not validate the JSON at runtime.
       const pages: { href: string; label: string }[] = JSON.parse(this.dataset.pages ?? "[]");
+      // nodes are 3D points; connections contain pairs of their indexes; extent
+      // describes the original scale. The helper keeps geometry separate from UI.
       const { nodes, connections, extent } = createPageCloud(pages);
-      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      // querySelectorAll returns a NodeList. `...` spreads its entries into an
+      // ordinary array so we can use array methods such as map below.
+      const links = [...this.querySelectorAll<HTMLAnchorElement>(".cloud-link")];
+      // Every listener using this signal can be removed together with abort().
+      const controller = new AbortController();
+      const options = { signal: controller.signal };
+      // `const` prevents reassignment; `let` allows a variable's value to change.
+      // These variables hold measured dimensions, colors, and interaction state.
       let width = 0;
       let height = 0;
       let accent = "";
-      let text = "";
-      let elapsed = 0;
-      let lastFrame = 0;
+      let surface = "";
+      // Object spread makes a copy, leaving the imported default object unchanged.
+      let rotation = { ...DEFAULT_CLOUD_ROTATION };
+      // ReturnType derives the result type of layoutPageCloud; typeof refers to
+      // its function type here, so we do not repeat the projected-point definition.
+      let positions: ReturnType<typeof layoutPageCloud> = [];
+      let sizes = links.map(() => ({ width: 0, height: 0 }));
+      // Array indexes start at 0; -1 represents "no hovered/focused node".
+      let hovered = -1;
+      let focused = -1;
+      // frame stores a queued animation request; 0 means no request is pending.
       let frame = 0;
-      let visible = false;
+      let suppressClick = false;
+      // `| undefined` allows either a drag record or no drag. yaw rotates sideways
+      // and pitch tilts vertically, both in radians rather than degrees.
+      let drag: { id: number; x: number; y: number; yaw: number; pitch: number; moved: boolean } | undefined;
 
+      // Three faint great circles make the volume visible as the map turns.
+      // map creates one ring per axis. Array.from makes 65 sample points; `_`
+      // marks an unused value. index / 64 covers one full turn (2 * PI radians).
+      // sin/cos convert each angle into coordinates on its circle.
+      const orbits = [0, 1, 2].map((axis) => Array.from({ length: 65 }, (_, index) => {
+        const angle = index / 64 * Math.PI * 2;
+        const a = Math.cos(angle);
+        const b = Math.sin(angle);
+        // `condition ? yes : no` is a ternary expression. These choices put each
+        // ring in a different plane. Empty link fields let it use the same helper.
+        return { href: "", label: "", x: axis === 0 ? 0 : a, y: axis === 1 ? 0 : axis === 0 ? a : b, z: axis === 2 ? 0 : b };
+      }));
+
+      // Canvas does not retain editable shape objects. Repainting clears the old
+      // pixels, projects the current 3D positions, and draws everything again.
       function draw() {
+        if (!width || !height) return;
+        // The non-null assertion `!` tells TypeScript the earlier setup guard
+        // checked context. It does not add a runtime check or change the value.
         const ctx = context!;
         ctx.clearRect(0, 0, width, height);
-        const positions = layoutPageCloud(nodes, extent, width, height, elapsed);
+        // Project 3D coordinates onto the 2D drawing surface at the current angle.
+        positions = layoutPageCloud(nodes, extent, width, height, rotation);
+        // Prefer the hovered node; otherwise highlight the keyboard-focused one.
+        const active = hovered >= 0 ? hovered : focused;
+        // Drawing settings persist. Alpha is opacity (0 invisible, 1 solid).
+        // A dash pattern of [3, 6] alternates 3px lines and 6px gaps.
         ctx.strokeStyle = accent;
         ctx.lineWidth = 1;
-        ctx.globalAlpha = 0.4;
-        ctx.beginPath();
+        ctx.globalAlpha = 0.12;
+        ctx.setLineDash([3, 6]);
+        // for...of visits each ring. beginPath starts a shape, moveTo places its
+        // first point, lineTo adds connected segments, and stroke paints the line.
+        for (const orbit of orbits) {
+          const ring = layoutPageCloud(orbit, 1, width, height, rotation);
+          ctx.beginPath();
+          ring.forEach((point, index) => index ? ctx.lineTo(point.x, point.y) : ctx.moveTo(point.x, point.y));
+          ctx.stroke();
+        }
+        // Restore solid lines before drawing connections between nodes.
+        ctx.setLineDash([]);
+
+        // Array destructuring names the two endpoint indexes. Connections touching
+        // the active node become brighter and thicker for visual feedback.
         for (const [from, to] of connections) {
+          const highlighted = from === active || to === active;
+          ctx.globalAlpha = highlighted ? 0.85 : 0.3;
+          ctx.lineWidth = highlighted ? 1.8 : 1;
+          ctx.beginPath();
           ctx.moveTo(positions[from].x, positions[from].y);
           ctx.lineTo(positions[to].x, positions[to].y);
+          ctx.stroke();
         }
-        ctx.stroke();
 
-        // One visible point per actual page, with no decorative particles.
+        // forEach runs once per point. Move the matching HTML link beside its dot
+        // so the canvas geometry and the actual clickable navigation stay aligned.
         positions.forEach((point, index) => {
+          const selected = index === active;
+          const size = sizes[index];
+          // Keep a fixed offset from each node instead of repacking labels as
+          // the map turns. Clamping at the edges is continuous, so nothing jumps.
+          const offset = index === 0 ? -size.width - 12 : 12;
+          // Math.min/Math.max clamp each label to the viewport with an 8px margin.
+          const x = Math.max(8, Math.min(width - size.width - 8, point.x + offset));
+          const y = Math.max(8, Math.min(height - size.height - 8, point.y - size.height / 2));
+          // Backticks create a template string; ${...} inserts values into it.
+          // translate moves the label visually without rearranging sibling links.
+          links[index].style.transform = `translate(${x}px, ${y}px)`;
+          // Raise the active label above others; data-active lets CSS use the
+          // same highlight for a hovered dot, hovered label, or focused link.
+          links[index].style.zIndex = selected ? "2" : "1";
+          links[index].toggleAttribute("data-active", selected);
+        });
+
+        // Draw the nearest nodes last; perspective also changes their size.
+        // map copies each point and adds its original index; sort then orders
+        // this new array by depth. Subtracting z values gives a numeric comparison.
+        positions.map((point, index) => ({ ...point, index })).sort((a, b) => a.z - b.z).forEach((point) => {
+          const selected = point.index === active;
+          const radius = (point.index === 0 ? 6 : 4.5) * point.perspective;
+          // Paint a soft halo, a background-colored rim, then the dot. arc uses
+          // radians, so 0 through 2 * PI creates a full circle; fill colors it in.
+          ctx.globalAlpha = selected ? 0.25 : 0.1;
           ctx.fillStyle = accent;
-          ctx.globalAlpha = 0.13;
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 12, 0, Math.PI * 2);
+          ctx.arc(point.x, point.y, radius + (selected ? 12 : 6), 0, Math.PI * 2);
           ctx.fill();
-          ctx.globalAlpha = 0.9;
+          ctx.globalAlpha = 1;
+          ctx.fillStyle = surface;
           ctx.beginPath();
-          ctx.arc(point.x, point.y, 4, 0, Math.PI * 2);
+          ctx.arc(point.x, point.y, radius + 2, 0, Math.PI * 2);
           ctx.fill();
-          ctx.fillStyle = text;
-          ctx.globalAlpha = 0.7;
-          ctx.font = "12px system-ui, sans-serif";
-          const labelWidth = ctx.measureText(nodes[index].label).width;
-          const labelX = Math.max(8, Math.min(width - labelWidth - 8, point.x + 16));
-          ctx.fillText(nodes[index].label, labelX, point.y + 4);
+          ctx.fillStyle = accent;
+          ctx.globalAlpha = selected ? 1 : 0.65 + (point.z + 1) * 0.15;
+          ctx.beginPath();
+          ctx.arc(point.x, point.y, radius, 0, Math.PI * 2);
+          ctx.fill();
         });
         ctx.globalAlpha = 1;
       }
 
-      function shouldAnimate() {
-        return visible && !document.hidden && !reducedMotion.matches;
+      // Pointer events may arrive faster than the screen refreshes. Queue at most
+      // one repaint per animation frame, clearing its handle before it runs.
+      function requestDraw() {
+        if (frame) return;
+        frame = requestAnimationFrame(() => { frame = 0; draw(); });
       }
 
-      function tick(now: number) {
-        frame = 0;
-        if (lastFrame) elapsed += Math.min((now - lastFrame) / 1000, 0.05);
-        lastFrame = now;
-        draw();
-        if (shouldAnimate()) frame = requestAnimationFrame(tick);
+      // `%` is the remainder operator: wrap yaw around a full turn. Clamp pitch
+      // just short of straight up/down so the view cannot flip over vertically.
+      function setRotation(yaw: number, pitch: number) {
+        rotation = { yaw: yaw % (Math.PI * 2), pitch: Math.max(-1.45, Math.min(1.45, pitch)) };
+        requestDraw();
       }
 
-      function updateAnimation() {
-        cancelAnimationFrame(frame);
-        frame = 0;
-        lastFrame = 0;
-        draw();
-        if (shouldAnimate()) frame = requestAnimationFrame(tick);
+      // Copy the starting rotation and redraw without reloading the page.
+      function reset() {
+        rotation = { ...DEFAULT_CLOUD_ROTATION };
+        requestDraw();
       }
 
+      // Event targets are not always elements. instanceof checks first; closest
+      // also accepts children inside a link. dataset values are text, so Number
+      // converts the stored index into a numeric array index.
+      function nodeFromTarget(target: EventTarget | null) {
+        const link = target instanceof Element ? target.closest<HTMLAnchorElement>(".cloud-link") : null;
+        return link ? Number(link.dataset.node) : -1;
+      }
+
+      // Canvas dots are pixels, not separate DOM elements. Hit testing chooses
+      // the nearest projected node within 20 pixels of the pointer.
+      function hitNode(clientX: number, clientY: number) {
+        const bounds = viewport!.getBoundingClientRect();
+        let hit = -1;
+        let distance = 20;
+        positions.forEach((point, index) => {
+          // clientX/Y use browser-window coordinates. Subtract the viewport's
+          // offset to match canvas coordinates; hypot gives the distance.
+          const next = Math.hypot(clientX - bounds.left - point.x, clientY - bounds.top - point.y);
+          if (next < distance) { hit = index; distance = next; }
+        });
+        return hit;
+      }
+
+      // Pointer events cover mouse, touch, and pen. Only the primary pointer's
+      // main button can start a drag. Save its start position and rotation so all
+      // later movement is measured from a stable reference.
+      viewport.addEventListener("pointerdown", (event) => {
+        if (!event.isPrimary || event.button !== 0 || drag) return;
+        suppressClick = false;
+        drag = { id: event.pointerId, x: event.clientX, y: event.clientY, ...rotation, moved: false };
+      }, options);
+      // Optional chaining checks the drag id only when a drag exists. Require
+      // movement beyond 7px to distinguish an intentional drag from a click/tap.
+      viewport.addEventListener("pointermove", (event) => {
+        if (drag?.id === event.pointerId) {
+          const dx = event.clientX - drag.x;
+          const dy = event.clientY - drag.y;
+          if (!drag.moved && Math.hypot(dx, dy) > 7) {
+            drag.moved = true;
+            // Capture keeps this pointer's events arriving outside the viewport.
+            // The data attribute also selects the dragging cursor through CSS.
+            viewport.setPointerCapture(event.pointerId);
+            viewport.dataset.dragging = "true";
+            hovered = -1;
+          }
+          if (drag.moved) {
+            // Cancel the browser's default action when allowed. Scaling pixel
+            // movement by 0.008 controls how fast the map rotates.
+            if (event.cancelable) event.preventDefault();
+            setRotation(drag.yaw + dx * 0.008, drag.pitch + dy * 0.008);
+          }
+        } else if (!drag) {
+          // When idle, either a real link or a nearby drawn dot can be highlighted.
+          const targetNode = nodeFromTarget(event.target);
+          const next = targetNode >= 0 ? targetNode : hitNode(event.clientX, event.clientY);
+          if (hovered !== next) { hovered = next; requestDraw(); }
+          viewport.dataset.overNode = String(next >= 0);
+        }
+      }, options);
+
+      // Share this arrow-function handler across normal and canceled drag endings.
+      // PointerEvent tells TypeScript which event properties should be available.
+      const endDrag = (event: PointerEvent) => {
+        if (drag?.id !== event.pointerId) return;
+        if (event.type === "pointerup" && drag.moved) {
+          // A drag starting on a link must never become an accidental page visit.
+          suppressClick = true;
+        }
+        drag = undefined;
+        // delete removes the data attribute; release capture if it was acquired.
+        delete viewport.dataset.dragging;
+        if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+      };
+      viewport.addEventListener("pointerup", endDrag, options);
+      viewport.addEventListener("pointercancel", endDrag, options);
+      viewport.addEventListener("lostpointercapture", endDrag, options);
+      // Release a mouse press that leaves the viewport before becoming a drag.
+      window.addEventListener("pointerup", endDrag, options);
+      // Capture runs before normal link click handling. After a drag, cancel its
+      // pointer-generated click (detail > 0), while preserving keyboard clicks.
+      // stopPropagation also prevents other handlers from seeing the canceled click.
+      viewport.addEventListener("click", (event) => {
+        if (suppressClick && event.detail > 0) {
+          event.preventDefault();
+          event.stopPropagation();
+          suppressClick = false;
+          return;
+        }
+        // A real link already navigates normally. A click on a dot instead sends
+        // a click to its matching link, keeping modifier keys such as Ctrl/Command
+        // that visitors use to open a destination in another tab.
+        if (nodeFromTarget(event.target) >= 0) return;
+        const hit = hitNode(event.clientX, event.clientY);
+        if (hit >= 0) {
+          links[hit].dispatchEvent(new MouseEvent("click", {
+            bubbles: true, cancelable: true, view: window,
+            ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey, altKey: event.altKey,
+          }));
+        }
+      // Object spread retains the shared abort signal while adding capture here.
+      }, { ...options, capture: true });
+      // Clear transient hover on exit. Focus events bubble, so the viewport's
+      // handlers can track keyboard focus moving through any of its links.
+      viewport.addEventListener("pointerleave", () => {
+        hovered = -1;
+        delete viewport.dataset.overNode;
+        requestDraw();
+      }, options);
+      viewport.addEventListener("focusin", (event) => { focused = nodeFromTarget(event.target); requestDraw(); }, options);
+      viewport.addEventListener("focusout", () => { focused = -1; requestDraw(); }, options);
+      // Rotate only while the viewport itself has focus, preserving normal keys
+      // for focused links. Holding Shift chooses a larger rotation step.
+      viewport.addEventListener("keydown", (event) => {
+        if (event.target !== viewport) return;
+        const step = event.shiftKey ? 0.3 : 0.12;
+        // switch selects a matching key; break ends a case. Unknown keys return
+        // early, so we only prevent browser actions for the keys handled here.
+        switch (event.key) {
+          case "ArrowLeft": setRotation(rotation.yaw - step, rotation.pitch); break;
+          case "ArrowRight": setRotation(rotation.yaw + step, rotation.pitch); break;
+          case "ArrowUp": setRotation(rotation.yaw, rotation.pitch - step); break;
+          case "ArrowDown": setRotation(rotation.yaw, rotation.pitch + step); break;
+          case "Home": reset(); break;
+          default: return;
+        }
+        event.preventDefault();
+      }, options);
+      // Optional chaining permits a missing reset button. data-rotate selects
+      // the horizontal or vertical change associated with each arrow button.
+      this.querySelector(".cloud-reset")?.addEventListener("click", reset, options);
+      this.querySelectorAll<HTMLButtonElement>("[data-rotate]").forEach((button) => {
+        button.addEventListener("click", () => {
+          const direction = button.dataset.rotate;
+          setRotation(rotation.yaw + (direction === "left" ? -0.25 : direction === "right" ? 0.25 : 0),
+            rotation.pitch + (direction === "up" ? -0.2 : direction === "down" ? 0.2 : 0));
+        }, options);
+      });
+
+      // Measure viewport and label sizes again whenever either changes. Layout
+      // uses CSS pixels; high-DPI screens need extra backing pixels for sharp lines.
       const resize = () => {
-        const bounds = this.getBoundingClientRect();
+        const bounds = viewport.getBoundingClientRect();
         width = bounds.width;
         height = bounds.height;
+        // Cap density at 2 to limit rendering cost. `|| 1` falls back when density
+        // is falsy. Canvas dimensions must be integers, hence Math.round below.
         const ratio = Math.min(window.devicePixelRatio || 1, 2);
         canvas.width = Math.round(width * ratio);
         canvas.height = Math.round(height * ratio);
+        // Canvas width/height assignments reset its drawing state. Scale the
+        // context afterward so our geometry can keep using ordinary CSS pixels.
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
+        sizes = links.map((link) => {
+          const bounds = link.getBoundingClientRect();
+          return { width: bounds.width, height: bounds.height };
+        });
         draw();
       };
+      // CSS changes do not repaint canvas pixels automatically. Read this
+      // element's resolved CSS custom properties, then request a new drawing.
+      const readTheme = () => {
+        const styles = getComputedStyle(this);
+        accent = styles.getPropertyValue("--color-accent").trim();
+        surface = styles.getPropertyValue("--color-bg").trim();
+        requestDraw();
+      };
 
-      function readTheme() {
-        accent = getComputedStyle(canvas!).color;
-        text = getComputedStyle(document.documentElement).getPropertyValue("--color-muted").trim();
-        draw();
-      }
-
-      const controller = new AbortController();
-      const options = { signal: controller.signal };
-      reducedMotion.addEventListener("change", updateAnimation, options);
-      document.addEventListener("visibilitychange", updateAnimation, options);
-
-      const resizeObserver = new ResizeObserver(resize);
-      resizeObserver.observe(this);
-      const visibilityObserver = new IntersectionObserver(([entry]) => {
-        visible = entry.isIntersecting;
-        updateAnimation();
-      });
-      visibilityObserver.observe(this);
-      const themeObserver = new MutationObserver(readTheme);
-      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      // Progressive enhancement: after setup succeeds, activate diagram CSS,
+      // make the viewport keyboard-focusable, and reveal its interaction controls.
+      this.dataset.ready = "true";
+      viewport.tabIndex = 0;
+      this.querySelectorAll<HTMLElement>("[hidden]").forEach((element) => { element.hidden = false; });
       readTheme();
       resize();
-      this.dataset.ready = "true";
+      // Observe actual element sizes, including labels that can change when a
+      // font loads. A separate observer watches the root theme attribute.
+      const resizeObserver = new ResizeObserver(resize);
+      resizeObserver.observe(viewport);
+      links.forEach((link) => resizeObserver.observe(link));
+      const themeObserver = new MutationObserver(readTheme);
+      // documentElement is <html>. Watch only data-theme, which the shared
+      // layout changes when a visitor chooses a different color theme.
+      themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
+      // Keep one teardown function for all resources: cancel the queued frame,
+      // remove signaled listeners, and stop observing sizes and theme changes.
       this.cleanup = () => {
         cancelAnimationFrame(frame);
         controller.abort();
         resizeObserver.disconnect();
-        visibilityObserver.disconnect();
         themeObserver.disconnect();
       };
     }
 
+    // Called when this element leaves the document. Optional chaining permits
+    // setup to have returned early. Clearing cleanup lets it initialize again
+    // if the browser later reconnects the same element.
     disconnectedCallback() {
       this.cleanup?.();
       this.cleanup = undefined;
     }
   }
 
+  // Register the tag once, upgrading existing <page-cloud> elements to this class.
+  // The guard prevents a duplicate-registration error if this code runs again.
   if (!customElements.get("page-cloud")) customElements.define("page-cloud", PageCloud);
 </script>
 
+<!-- Astro scopes these styles to this component. CSS comments use /* ... */,
+     JavaScript/TypeScript supports //, and HTML comments use this syntax. -->
 <style>
+  /* A custom element starts inline. Make this one a block and allow it to shrink
+     inside the parent grid with min-width:0, keeping the page from widening. */
   page-cloud {
     display: block;
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    overflow: hidden;
-    pointer-events: none;
-    opacity: 0.6;
-    mask-image: linear-gradient(to right, rgb(0 0 0 / 12%), rgb(0 0 0 / 65%) 55%, black);
+    min-width: 0;
+    /* The next existing comment disables two declarations. Removing its comment
+       markers would add a border and round the corners. var(--border-radius)
+       reads a reusable CSS custom property defined in global.css. */
+    /* border: 1px solid var(--color-border);
+    border-radius: var(--border-radius); */
+    /* An elliptical gradient creates a soft glow centered at 50%/45%. color-mix
+       blends 6% of the accent color with transparency, fading toward the edge. */
+    background: radial-gradient(ellipse at 50% 45%, color-mix(in srgb, var(--color-accent) 6%, transparent), transparent 70%);
   }
 
-  canvas,
-  .cloud-fallback {
-    display: block;
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    inset: 0;
-    color: color-mix(in srgb, var(--color-accent) 72%, var(--color-text));
+  /* A dot selects a class. Flexbox puts children in a row; space-between pushes
+     the title and reset control apart while align-items centers them vertically. */
+  .cloud-heading {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    /* Three padding values mean top, horizontal sides, bottom. rem scales with
+       the root font size; var() reads colors shared by the current theme. */
+    padding: 0.75rem 1rem 0;
+    color: var(--color-muted);
+    font-size: 0.875rem;
   }
 
-  canvas {
-    visibility: hidden;
+  /* Commas share rules across selectors. A space selects descendants: buttons
+     inside .rotation-buttons. inline-flex aligns each icon/label internally.
+     A 44px minimum height makes the controls easier to tap. */
+  .cloud-reset,
+  .rotation-buttons button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 44px;
+    padding: 0.5rem;
+    /* Reserve border space while invisible, avoiding a size change on hover. */
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--color-muted);
+    /* Replace the browser's default button font with the parent's font. */
+    font: inherit;
+    cursor: pointer;
   }
 
-  [data-ready="true"] canvas {
-    visibility: visible;
-  }
-
-  [data-ready="true"] .cloud-fallback {
+  /* [hidden] is an attribute selector. Explicit display:none ensures the HTML
+     hidden attribute wins over the flex/inline-flex rules above and below. */
+  .cloud-reset[hidden],
+  .cloud-controls[hidden] {
     display: none;
   }
 
-  .cloud-fallback line {
-    stroke: currentColor;
-    stroke-opacity: 0.4;
+  /* :hover supplies feedback while a pointer rests over a control. */
+  .cloud-reset:hover,
+  .rotation-buttons button:hover {
+    border-color: var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text);
   }
 
-  .cloud-fallback circle {
-    fill: currentColor;
+  /* :focus-visible commonly shows during keyboard use. An outline draws a clear
+     focus ring without changing the size of the element or surrounding layout. */
+  button:focus-visible,
+  .cloud-viewport:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 2px;
   }
 
-  .cloud-fallback text {
-    fill: var(--color-muted);
-    font: 12px system-ui, sans-serif;
+  /* position:relative makes this the reference for absolute children. Minimum
+     height reserves drawing space even before JavaScript has measured it. */
+  .cloud-viewport {
+    position: relative;
+    min-height: 25rem;
+    border-radius: 8px;
+  }
+
+  /* These styles activate only after JavaScript marks the component ready. */
+  [data-ready="true"] .cloud-viewport {
+    cursor: grab;
+    /* Let touch users scroll the page vertically and pinch to zoom. */
+    touch-action: pan-y pinch-zoom;
+    /* Prevent text selection during dragging. The WebKit-prefixed property
+       supports browsers that still require that spelling. */
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* JS updates attributes to communicate state to CSS; a clickable canvas dot
+     gets the same pointer cursor as an ordinary link. */
+  .cloud-viewport[data-over-node="true"] {
+    cursor: pointer;
+  }
+
+  /* Apply the grabbing cursor both on the viewport and any link under the drag. */
+  .cloud-viewport[data-dragging="true"],
+  .cloud-viewport[data-dragging="true"] a {
+    cursor: grabbing;
+  }
+
+  /* Absolutely position the bitmap behind the links. inset:0 sets all four edges
+     to zero; pointer-events:none lets pointer input pass through to the map/links. */
+  canvas {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+
+  /* Only reveal the drawing surface once the drawing code has initialized. */
+  [data-ready="true"] canvas {
+    display: block;
+  }
+
+  /* The fallback navigation is a normal row of links that wraps onto more lines. */
+  .cloud-links {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    padding: 1rem;
+  }
+
+  /* In diagram mode, overlay navigation across the drawing. Blank space passes
+     pointer input through; individual anchors re-enable pointer events below. */
+  [data-ready="true"] .cloud-links {
+    position: absolute;
+    inset: 0;
+    padding: 0;
+    pointer-events: none;
+  }
+
+  /* max-content fits the text. min() picks the smaller width cap, while calc()
+     reserves horizontal space when capping each label's box in a narrow viewport.
+     The nowrap rule below keeps the text on one line, so long text can overflow. */
+  .cloud-link {
+    display: inline-flex;
+    align-items: center;
+    width: max-content;
+    max-width: min(11.5rem, calc(100% - 1rem));
+    min-height: 24px;
+    padding: 0.25rem 0.375rem;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+    line-height: 1.4;
+    /* Keep labels on one line; a unitless line-height multiplies the font size. */
+    white-space: nowrap;
+    pointer-events: auto;
+    /* Animate only opacity and text color over 160 milliseconds. ease varies
+       the speed smoothly at the beginning and end of the change. */
+    transition: opacity 160ms ease, color 160ms ease;
+  }
+
+  /* Start every label at the viewport origin; JS uses translate(x,y) to move it
+     next to its dot. Reduced opacity makes inactive labels less prominent. */
+  [data-ready="true"] .cloud-link {
+    position: absolute;
+    top: 0;
+    left: 0;
+    opacity: 0.55;
+  }
+
+  /* Give hover, keyboard focus, and the JS data-active state the same treatment.
+     Underlining adds a visible cue alongside the color/opacity changes. */
+  .cloud-link:hover,
+  .cloud-link:focus-visible,
+  .cloud-link[data-active] {
+    color: var(--color-text);
+    opacity: 1;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+  }
+
+  /* Help and rotation controls share a row or wrap if space is tight. Two gap
+     values set row spacing first, then column spacing. */
+  .cloud-controls {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.25rem 0.75rem;
+    padding: 0 1rem 0.75rem;
+  }
+
+  /* Remove the paragraph's default margin and style the hint as secondary text. */
+  .cloud-help {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.75rem;
+  }
+
+  /* Keep the four arrow controls together in a horizontal row. */
+  .rotation-buttons {
+    display: flex;
+  }
+
+  .rotation-buttons button {
+    /* Pair width with the shared minimum height for a generous tap target. */
+    min-width: 44px;
+    font-size: 1rem;
+  }
+
+  /* Desktop wording is the default; a pointer media query switches it below. */
+  .touch-help {
+    display: none;
+  }
+
+  /* Clip this text visually while keeping it available to screen readers.
+     A tiny absolute box avoids display:none, which would hide it from them too. */
+  .sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  /* Media queries activate rules when their condition matches. On wide screens,
+     clamp(min, preferred, max) makes the minimum height follow viewport width
+     (1vw = 1% of that width), within a range of 25rem to 33rem. Content can still
+     make the element taller because this sets min-height rather than height. */
+  @media (min-width: 1101px) {
+    .cloud-viewport {
+      min-height: clamp(25rem, 33vw, 33rem);
+    }
+  }
+
+  /* A coarse primary pointer is usually a touchscreen. Enlarge link tap targets
+     and show gesture instructions appropriate for that input method. */
+  @media (pointer: coarse) {
+    .cloud-link {
+      min-height: 44px;
+    }
+
+    .desktop-help {
+      display: none;
+    }
+
+    .touch-help {
+      display: inline;
+    }
+  }
+
+  /* Respect the operating system's reduced-motion preference by removing label
+     highlight transitions. Directly controlled map rotation still works. */
+  @media (prefers-reduced-motion: reduce) {
+    .cloud-link {
+      transition: none;
+    }
   }
 </style>

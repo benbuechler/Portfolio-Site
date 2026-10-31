@@ -1,38 +1,66 @@
 
 ---
+// This frontmatter runs while Astro builds the page, not in the visitor's browser.
+// Importing the stylesheet here makes its shared rules available on every page
+// that uses this layout. A relative path starts from this file's directory.
 import "../styles/global.css";
 
+// Props describes the values another component may pass to <BaseLayout>.
+// TypeScript uses these annotations for editor checks; they are not browser code.
 interface Props {
   title: string;
+  // The ? makes description optional; title is required.
   description?: string;
 }
 
+// Object destructuring reads named properties from Astro.props into variables.
+// The = value supplies a default when the caller leaves description undefined.
 const {
   title,
   description = "Engineering portfolio of Ben Buechler",
 } = Astro.props;
 
+// An array ([]) holds one object ({}) per navigation link. Keeping the data
+// together lets the template below create the links with one map() call.
 const navigation = [
   { href: "/", label: "Home" },
   { href: "/projects", label: "Projects" },
   { href: "/contact", label: "Contact" },
   { href: "/experience", label: "Experience" },
 ];
+// pathname is the URL path without a query string. /\/$/ is a regular expression
+// matching a slash at the end; removing it makes /projects and /projects/ agree.
+// || falls back to "/" because removing the home page's slash leaves "".
 const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 ---
 
+<!-- This template becomes the HTML document. The doctype selects modern HTML,
+     and lang helps screen readers choose the correct pronunciation. -->
 <!doctype html>
 <html lang="en">
   <head>
+    <!-- Metadata configures the document rather than adding visible page content.
+         UTF-8 supports Unicode; viewport makes mobile CSS use the device width.
+         Curly braces insert the frontmatter's description into the attribute. -->
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="description" content={description} />
+    <!-- is:inline tells Astro to leave this script in place without bundling it.
+         In the head, it can set the theme before the browser draws the body. -->
     <script is:inline>
       // Apply the preference before rendering to avoid a flash of the wrong theme.
+      // let declares a variable we can assign later. It starts as undefined.
       let savedTheme;
       try {
+        // localStorage keeps strings for this website across browser visits.
         savedTheme = localStorage.getItem("theme");
+      // Some browser/privacy settings block storage. An empty catch lets the
+      // system preference remain the fallback instead of stopping the script.
       } catch {}
+      // documentElement is <html>; dataset.theme sets its data-theme attribute.
+      // === compares values without converting types, and || means "or".
+      // condition ? first : second chooses one value; the nested choice uses
+      // the operating system's colour preference when no valid theme was saved.
       document.documentElement.dataset.theme =
         savedTheme === "light" || savedTheme === "dark"
           ? savedTheme
@@ -40,21 +68,47 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
             ? "dark"
             : "light";
     </script>
+    <!-- Files in public/ are served from the site root, so this URL omits public/.
+         The title expression supplies the browser tab's page-specific text. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <title>{title} | Ben Buechler</title>
   </head>
 
   <body>
+    <!-- Keyboard users can jump past the navigation to the matching id below. -->
     <a class="skip-link" href="#main-content">Skip to content</a>
     <header class="site-header">
+      <!-- nav identifies a navigation landmark; aria-label gives it a useful name. -->
       <nav class="site-nav" aria-label="Main navigation">
         <a class="logo" href="/" aria-label="Ben Buechler home">BB<span>.</span></a>
-        <div class="nav-links">
+        <!-- hidden keeps the button out of the interface until JS enables it.
+             aria-controls names the element it opens; aria-expanded stores state.
+             type="button" prevents accidental form submission if reused in a form. -->
+        <button class="nav-toggle" type="button" aria-expanded="false" aria-controls="nav-links" aria-label="Open navigation menu" hidden>
+          <!-- SVG draws scalable icons. viewBox supplies the coordinate system;
+               currentColor inherits the button's text colour. The two paths draw
+               the menu and close icons, and CSS chooses which one is visible.
+               aria-hidden avoids repeating the button's accessible label. -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+            <path class="menu-icon" d="M4 6h16M4 12h16M4 18h16" />
+            <path class="close-icon" d="m6 6 12 12M6 18 18 6" />
+          </svg>
+        </button>
+        <div class="nav-links" id="nav-links">
+          <!-- map returns one anchor per object. ({ href, label }) destructures
+               each object; the arrow function's parentheses return its markup.
+               aria-current is "page" for an exact match and "location" for a
+               nested route. undefined omits the attribute for unrelated links.
+               !== means "not equal"; && requires both conditions to be true;
+               backticks with ${...} insert a value into a template string. -->
           {navigation.map(({ href, label }) => (
             <a href={href} aria-current={currentPath === href ? "page" : href !== "/" && currentPath.startsWith(`${href}/`) ? "location" : undefined}>
               {label}
             </a>
           ))}
+          <!-- A real checkbox provides keyboard support; role="switch" describes
+               its on/off meaning. The label also makes its surrounding text
+               clickable. CSS draws the decorative track beside the input. -->
           <label class="theme-toggle" hidden>
             <span>Light</span>
             <input id="theme-toggle" type="checkbox" role="switch" aria-label="Dark mode" />
@@ -65,32 +119,107 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
       </nav>
     </header>
 
+    <!-- main identifies the primary content. tabindex="-1" permits focus when
+         reached through the skip link without adding another normal Tab stop. -->
     <main id="main-content" class="site-main" tabindex="-1">
+      <!-- A slot inserts whatever the page places between <BaseLayout> tags. -->
       <slot />
     </main>
 
     <footer class="site-footer">
+      <!-- This date expression runs when Astro renders the layout, so a static
+           site's displayed year is refreshed when that site is rebuilt. -->
       © {new Date().getFullYear()} Ben Buechler
     </footer>
+    <!-- Unlike frontmatter, this bundled script runs in the visitor's browser.
+         Astro processes its TypeScript into JavaScript before shipping it. -->
     <script>
+      // querySelector finds the first matching HTML element or returns null.
+      // <HTMLElement> and <HTMLButtonElement> tell TypeScript the expected type;
+      // these annotations do not perform a runtime check or create an element.
+      const nav = document.querySelector<HTMLElement>(".site-nav");
+      const menuToggle = document.querySelector<HTMLButtonElement>(".nav-toggle");
+      // matchMedia exposes whether the same breakpoint used by mobile CSS matches.
+      const mobileScreen = window.matchMedia("(max-width: 768px)");
+
+      // Guard against missing elements before accessing their properties.
+      if (nav && menuToggle) {
+        // This arrow function accepts a boolean (true/false). Keeping all menu
+        // updates here keeps screen-reader attributes and CSS classes in sync.
+        const setMenuOpen = (open: boolean) => {
+          // HTML attributes store text, so String(open) converts the boolean.
+          menuToggle.setAttribute("aria-expanded", String(open));
+          menuToggle.setAttribute("aria-label", open ? "Close navigation menu" : "Open navigation menu");
+          // With a second argument, toggle adds the class for true, removes it for false.
+          nav.classList.toggle("menu-open", open);
+        };
+
+        // Progressive enhancement: only collapse the mobile links after the
+        // listeners can make the menu usable. Without JS the links stay available.
+        nav.classList.add("menu-ready");
+        menuToggle.hidden = false;
+        // addEventListener registers a callback to run later, when the event fires.
+        menuToggle.addEventListener("click", () => {
+          // Reading the old attribute and comparing it inverts the current state.
+          setMenuOpen(menuToggle.getAttribute("aria-expanded") !== "true");
+        });
+        document.addEventListener("keydown", (event) => {
+          // Escape closes an open menu and returns keyboard focus to its button.
+          if (event.key === "Escape" && menuToggle.getAttribute("aria-expanded") === "true") {
+            setMenuOpen(false);
+            menuToggle.focus();
+          }
+        });
+        document.addEventListener("click", (event) => {
+          // instanceof verifies the click target is a DOM Node. ! means "not",
+          // so clicking anywhere outside this navigation closes the menu.
+          if (event.target instanceof Node && !nav.contains(event.target)) setMenuOpen(false);
+        });
+        // querySelectorAll finds every matching link; forEach attaches a listener
+        // to each one. Following a link also resets the menu state.
+        nav.querySelectorAll(".nav-links a").forEach((link) => {
+          link.addEventListener("click", () => setMenuOpen(false));
+        });
+        mobileScreen.addEventListener("change", () => {
+          // When switching to desktop width, the mobile button becomes hidden.
+          // Move focus to a visible link if the hidden button held it. ?. is
+          // optional chaining: call focus only if a link was actually found.
+          if (!mobileScreen.matches && document.activeElement === menuToggle) {
+            nav.querySelector<HTMLAnchorElement>(".nav-links a")?.focus();
+          }
+          // Reset the state at either side of the breakpoint.
+          setMenuOpen(false);
+        });
+      }
+
+      // This second interaction connects the checkbox to the theme chosen above.
       const toggle = document.querySelector<HTMLInputElement>("#theme-toggle");
       const systemTheme = window.matchMedia("(prefers-color-scheme: dark)");
+      // let is used because choosing a theme changes this value later.
       let hasPreference = false;
       try {
+        // includes checks for either allowed value. ?? supplies "" only when the
+        // storage result is null or undefined (a missing key returns null).
         hasPreference = ["light", "dark"].includes(localStorage.getItem("theme") ?? "");
+      // Storage failure leaves hasPreference false, allowing system-theme updates.
       } catch {}
 
       if (toggle) {
+        // checked is the checkbox's boolean state, independent of its HTML text.
         toggle.checked = document.documentElement.dataset.theme === "dark";
+        // closest walks up to the surrounding label; reveal it when JS is ready.
         toggle.closest("label")?.removeAttribute("hidden");
         toggle.addEventListener("change", () => {
           const theme = toggle.checked ? "dark" : "light";
           document.documentElement.dataset.theme = theme;
           hasPreference = true;
           try {
+            // Save a deliberate choice so it wins over later system changes.
             localStorage.setItem("theme", theme);
           } catch {}
         });
+        // Destructuring extracts matches from the media-query change event.
+        // Follow system changes only until the visitor chooses their own theme.
         systemTheme.addEventListener("change", ({ matches }) => {
           if (!hasPreference) {
             document.documentElement.dataset.theme = matches ? "dark" : "light";
@@ -103,6 +232,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 </html>
 
 <style>
+/* Astro scopes this selector to the header in this file. var(...) reads the
+   shared colour defined in global.css, so the line responds to theme changes.
+   The border shorthand gives its width, style, and colour in that order. */
 .site-header {
   border-bottom: 1px solid var(--border-color);
 }

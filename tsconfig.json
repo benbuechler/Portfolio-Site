@@ -1,13 +1,21 @@
 {
+  // TypeScript accepts comments in tsconfig.json. package.json uses strict JSON
+  // instead, so its fields are explained in README.md rather than in comments.
+  // Inherit Astro's strict settings so the editor catches more type mistakes.
   "extends": "astro/tsconfigs/strict",
+  // Include Astro's generated declarations and source files under this project.
+  // ** means any number of directories; * matches names within one directory.
   "include": [
     ".astro/types.d.ts",
     "**/*"
   ],
+  // dist contains generated build output, not files we author or type-check.
   "exclude": [
     "dist"
   ],
   "compilerOptions": {
+    // JSX is HTML-like syntax used by React. Use React's automatic JSX runtime
+    // and obtain its JSX types from React when editing framework components.
     "jsx": "react-jsx",
     "jsxImportSource": "react"
   }

@@ -1,4 +1,7 @@
 {
+  // VS Code reads this JSON-with-comments file to suggest helpful extensions.
+  // This extension understands .astro syntax, highlighting, and completions.
   "recommendations": ["astro-build.astro-vscode"],
+  // An empty array means this project does not discourage any extensions here.
   "unwantedRecommendations": []
 }

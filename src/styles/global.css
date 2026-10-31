@@ -1,8 +1,18 @@
+/*
+  Shared styles for every page: BaseLayout.astro imports this file once.
+  A CSS rule has a selector (what to style) followed by { property: value; }.
+  A dot selects a class, # selects an id, and a bare name selects an HTML tag.
+  Component <style> blocks add scoped styles beside their own markup.
+*/
 
+/* :root selects <html>. Custom properties beginning with -- are inherited,
+   so components can reuse this palette and spacing with var(--property-name). */
 :root {
-  /* Colours */
+  /* Colours: hex values describe red, green, and blue. These are the dark defaults. */
   --color-bg: #1a1a1a;
+  /* Tell the browser to use dark native controls and scrollbars too. */
   color-scheme: dark;
+  /* --border-color and --color-border are separate variables used in the site. */
   --border-color: #e5e7eb;
   --color-surface: #242c3b;
   --color-accent: #2563ff;
@@ -11,15 +21,19 @@
   --color-border: #263249;
   --color-on-accent: #ffffff;
 
-  /* Typography */
+  /* Typography: try the operating system's UI font, then any sans-serif font. */
   --font-primary: system-ui, sans-serif;
 
-  /* Layout */
+  /* Layout: rem uses the root font size; vw is 1% of the viewport width.
+     clamp(minimum, preferred, maximum) scales gutters within sensible limits. */
   --max-width: 1600px;
   --page-gutter: clamp(1rem, 4vw, 4rem);
   --border-radius: 12px;
 }
 
+/* [attribute="value"] selects an element with that exact attribute value.
+   BaseLayout's JavaScript sets data-theme on <html>; only these values change.
+   Variables not listed here keep their values from :root above. */
 :root[data-theme="light"] {
   color-scheme: light;
   --border-color: #374151;
@@ -31,30 +45,39 @@
   --color-border: #d5dce7;
 }
 
+/* The universal selector matches every element. Include padding and borders
+   in its declared width/height instead of adding them outside that size. */
 * {
   box-sizing: border-box;
 }
 
+/* In-page anchor links scroll gradually rather than jumping immediately. */
 html {
   scroll-behavior: smooth;
 }
 
+/* Stack header, main, and footer vertically. The main area's flex: 1 below
+   fills spare space, helping the footer reach the bottom on short pages. */
 body {
   display: flex;
   flex-direction: column;
-  min-height: 100svh;
+  min-height: 100svh; /* svh uses the small viewport height, useful on phones. */
   margin: 0;
-  background: var(--color-bg);
+  background: var(--color-bg); /* Read the active theme's custom property. */
   color: var(--color-text);
   font-family: var(--font-primary);
-  line-height: 1.6;
+  line-height: 1.6; /* Unitless: each line is 1.6 times the element's font size. */
 }
 
+/* A pseudo-class beginning with : describes a state. :focus-visible gives
+   links a clear outline when the browser decides a focus indicator is needed. */
 a:focus-visible {
   outline: 2px solid var(--color-text);
-  outline-offset: 4px;
+  outline-offset: 4px; /* Leave space between the outline and the link. */
 }
 
+/* This keyboard shortcut jumps past navigation to <main id="main-content">.
+   Absolute positioning removes it from normal flow; z-index raises its layer. */
 .skip-link {
   position: absolute;
   top: 1rem;
@@ -62,19 +85,24 @@ a:focus-visible {
   z-index: 1;
   padding: 0.75rem 1rem;
   background: var(--color-surface);
-  transform: translateY(-200%);
+  transform: translateY(-200%); /* Hide it above its normal position. */
 }
 
+/* Reveal the shortcut when a visitor tabs to it. */
 .skip-link:focus {
   transform: translateY(0);
 }
 
+/* A media query applies rules only when its condition matches. Respect the
+   visitor's operating-system preference by disabling smooth scrolling. */
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
   }
 }
 
+/* Links inherit nearby text colours. Individual link styles restore an
+   underline where appropriate; the focus outline remains available. */
 a {
   color: inherit;
   text-decoration: none;
@@ -82,18 +110,21 @@ a {
 
 /* Shared Navigation */
 
+/* Flexbox arranges children in a row by default. Push the brand and links
+   apart, align their centres, and allow wrapping when horizontal space runs out. */
 .site-nav {
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
   max-width: var(--max-width);
-  margin-inline: auto;
-  padding: 32px var(--page-gutter);
+  margin-inline: auto; /* Auto inline margins centre this capped-width block. */
+  padding: 32px var(--page-gutter); /* Two values mean vertical, then horizontal. */
   flex-wrap: wrap;
   gap: 1rem;
 }
 
+/* Keep the links and theme switch together with responsive spacing. */
 .nav-links {
   display: flex;
   align-items: center;
@@ -101,6 +132,80 @@ a {
   gap: clamp(1rem, 3vw, 2rem);
 }
 
+/* The menu button starts hidden. The narrow-screen rules show it once
+   JavaScript has connected the menu events (.menu-ready). */
+.nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 1px solid var(--color-bg);
+  border-radius: 8px;
+  background: var(--color-bg);
+  color: var(--color-text);
+  cursor: pointer; /* Show the hand cursor to indicate an interactive control. */
+}
+
+/* Buttons need a keyboard focus indicator, just like links. */
+.nav-toggle:focus-visible {
+  outline: 2px solid var(--color-text);
+  outline-offset: 4px;
+}
+
+/* A space means "inside"; a comma shares one rule across multiple selectors.
+   Initially hide the close icon; when expanded, hide the menu icon instead. */
+.nav-toggle .close-icon,
+.nav-toggle[aria-expanded="true"] .menu-icon {
+  display: none;
+}
+
+/* The same aria-expanded value informs assistive technology and selects the icon. */
+.nav-toggle[aria-expanded="true"] .close-icon {
+  display: block;
+}
+
+/* At 768 CSS pixels or narrower, switch from desktop navigation to a menu. */
+@media (max-width: 768px) {
+  /* Logical "block" spacing is top/bottom in this horizontal writing mode. */
+  .site-nav {
+    padding-block: 1rem;
+  }
+
+  /* :not() excludes hidden controls. A space selects a descendant element. */
+  .menu-ready .nav-toggle:not([hidden]) {
+    display: inline-flex;
+  }
+
+  /* Occupy a full flex row, then stack the links and stretch their hit areas. */
+  .site-nav .nav-links {
+    flex-basis: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0.25rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  /* Without JavaScript these hiding rules do not match, so links stay usable. */
+  .menu-ready .nav-links {
+    display: none;
+  }
+
+  /* No space between classes means the same element must have both classes. */
+  .menu-ready.menu-open .nav-links {
+    display: flex;
+  }
+
+  /* Make each mobile link easier to tap by increasing vertical padding. */
+  .site-nav .nav-links a {
+    padding-block: 0.75rem;
+  }
+}
+
+/* The label wraps a real checkbox and a CSS-drawn switch. Only display it
+   after the script removes hidden; position: relative anchors the input. */
 .theme-toggle:not([hidden]) {
   display: inline-flex;
   align-items: center;
@@ -112,6 +217,8 @@ a {
   color: var(--color-muted);
 }
 
+/* Visually conceal the native checkbox while keeping it focusable and
+   associated with its label. display: none would remove keyboard access. */
 .theme-toggle input {
   position: absolute;
   width: 1px;
@@ -119,6 +226,7 @@ a {
   opacity: 0;
 }
 
+/* The pill-shaped track. A very large radius rounds both ends fully. */
 .theme-track {
   display: block;
   width: 48px;
@@ -129,36 +237,44 @@ a {
   background: var(--color-surface);
 }
 
+/* ::before creates a decorative pseudo-element: the switch's round thumb.
+   content: "" creates it without adding any text or extra HTML. */
 .theme-track::before {
   content: "";
   display: block;
   width: 20px;
   height: 20px;
-  border-radius: 50%;
+  border-radius: 50%; /* Equal width and height plus 50% makes a circle. */
   background: var(--color-muted);
 }
 
+/* :checked matches a checked checkbox; + selects its immediate next sibling. */
 .theme-toggle input:checked + .theme-track {
   background: var(--color-accent);
   border-color: var(--color-accent);
 }
 
+/* Slide the thumb to the other side and give it contrast against the accent. */
 .theme-toggle input:checked + .theme-track::before {
   transform: translateX(20px);
   background: var(--color-on-accent);
 }
 
+/* Show focus on the visible track even though the focused input is concealed. */
 .theme-toggle input:focus-visible + .theme-track {
   outline: 2px solid var(--color-text);
   outline-offset: 4px;
 }
 
+/* A descendant selector targets links inside the navigation group only. */
 .nav-links a {
   font-size: 1.0rem;
   padding-block: 1.5rem;
   color: var(--color-muted);
 }
 
+/* :hover follows the pointer; [aria-current] matches the current page's link.
+   Both states receive the same accent underline. */
 .nav-links a:hover,
 .nav-links a[aria-current] {
   color: var(--color-text);
@@ -167,11 +283,13 @@ a {
   text-underline-offset: 0.5rem;
 }
 
+/* The text brand is larger and heavier than ordinary navigation links. */
 .logo {
   font-size: 2.5rem;
   font-weight: 800;
 }
 
+/* Colour only the span inside the brand (the decorative full stop). */
 .logo span {
   color: var(--color-accent);
 }
@@ -179,6 +297,7 @@ a {
 
 /* Main Content Container */
 
+/* Fill available vertical flex space and centre content to match navigation. */
 .site-main {
   flex: 1;
   width: 100%;
@@ -187,10 +306,12 @@ a {
   padding: 0 var(--page-gutter);
 }
 
+/* Two padding-block values mean block-start and block-end (top and bottom). */
 .page-heading {
   padding-block: clamp(3rem, 8vw, 6rem) 2rem;
 }
 
+/* A small uppercase label above the heading; em spacing follows its font size. */
 .eyebrow {
   margin: 0 0 1rem;
   color: var(--color-muted);
@@ -200,6 +321,7 @@ a {
   text-transform: uppercase;
 }
 
+/* Grow the main heading with the viewport, while keeping minimum/maximum sizes. */
 .page-heading h1 {
   margin: 0;
   font-size: clamp(2rem, 5vw, 3.75rem);
@@ -207,45 +329,57 @@ a {
   letter-spacing: -0.03em;
 }
 
+/* ch is based on the font's "0" character width: a useful readable line limit. */
 .page-intro {
   max-width: 60ch;
   color: var(--color-muted);
   font-size: 1.125rem;
 }
 
+/* + means immediately following sibling: a card grid directly after the
+   heading receives the same bottom spacing as a standard section. */
 .page-section,
 .page-heading + .card-grid {
   margin-bottom: 4rem;
 }
 
+/* Grid places cards in rows and columns. auto-fit chooses how many fit.
+   Each column is at least 260px (or 100% on smaller screens), and can grow
+   equally with 1fr, one share of the remaining horizontal space. */
 .card-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr));
   gap: 1.25rem;
 }
 
+/* Shared card surface used on Projects and Contact. Border is a shorthand
+   for width, style, and colour. Padding separates content from that border. */
 .content-card {
   padding: clamp(1.25rem, 3vw, 2rem);
   border: 1px solid var(--color-border);
-  border-radius: var(--border-radius);
+  border-radius: var(--border-radius); /* Round corners using the shared 12px value. */
   background: var(--color-surface);
-  overflow-wrap: anywhere;
+  overflow-wrap: anywhere; /* Long URLs/words can wrap instead of widening the card. */
 }
 
+/* Remove the heading's default top gap so it lines up with the card padding. */
 .content-card h2,
 .content-card h3 {
   margin-top: 0;
 }
 
+/* Muted text gives the card's heading greater visual emphasis. */
 .content-card p {
   color: var(--color-muted);
 }
 
+/* Smaller placeholder/status text ends without an extra bottom margin. */
 .content-card .status {
   margin-bottom: 0;
   font-size: 0.875rem;
 }
 
+/* inline-block keeps a link in the text flow while allowing box-like padding. */
 .text-link {
   display: inline-block;
   padding-block: 0.5rem;
@@ -254,14 +388,17 @@ a {
   text-underline-offset: 0.25rem;
 }
 
+/* A thicker underline provides pointer feedback without shifting the layout. */
 .text-link:hover {
   text-decoration-thickness: 2px;
 }
 
+/* Keep the message shown before projects exist to a readable width. */
 .empty-state {
   max-width: 70ch;
 }
 
+/* Turn a normal bulleted list into wrapping rows of technology labels. */
 .tag-list {
   display: flex;
   flex-wrap: wrap;
@@ -270,6 +407,7 @@ a {
   list-style: none;
 }
 
+/* Each list item becomes a small pill, sharing the active theme's colours. */
 .tag-list li {
   padding: 0.25rem 0.75rem;
   border: 1px solid var(--color-border);
@@ -280,6 +418,9 @@ a {
 
 /* Shared Footer */
 
+/* Match the footer's text inset to the centred main content. calc() handles
+   arithmetic; max() chooses the gutter or the wider-screen inset, whichever
+   is larger. The footer's background/border can still span the whole page. */
 .site-footer {
   padding: 30px max(var(--page-gutter), calc((100% - var(--max-width)) / 2 + var(--page-gutter)));
   border-top: 1px solid var(--color-border);

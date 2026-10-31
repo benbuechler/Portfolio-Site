@@ -1,24 +1,28 @@
-# build output
+# Git uses these patterns to leave generated/local files out of new commits.
+# A trailing / matches a directory; * matches any characters in a filename.
+# Ignoring a file does not stop Git tracking it if it was already committed.
+
+# Build output: Astro recreates this from src/ when you run npm run build.
 dist/
-# generated types
+# Generated types: Astro maintains these declarations and other local state.
 .astro/
 
-# dependencies
+# Dependencies: package.json declares the packages; installation recreates these.
 node_modules/
 
-# logs
+# Logs: local diagnostic output rather than application source code.
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 
 
-# environment variables
+# Environment-variable files hold machine-specific settings and can contain secrets.
 .env
 .env.production
 
-# macOS-specific files
+# macOS Finder metadata is not part of the website.
 .DS_Store
 
-# jetbrains setting folder
+# Local settings for JetBrains editors are not shared by this project.
 .idea/

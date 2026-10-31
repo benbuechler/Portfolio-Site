@@ -1,11 +1,19 @@
+<!-- This reusable homepage introduction needs no frontmatter or browser script:
+     its HTML provides the content and its scoped CSS provides the appearance. -->
 <header>
+  <!-- h1 is the page's main heading. span lets one word use an accent colour;
+       br creates an intentional line break within the same heading. -->
   <h1>My name is <span class="accent">Ben</span>!<br />Welcome to My Portfolio</h1>
+  <!-- A paragraph groups related prose; the class connects it to CSS below. -->
   <p class="description">
     I am an electrical engineering student with a passion for technology and
     innovation. This portfolio showcases my projects, skills, and experiences in
     the field of electrical engineering. Feel free to explore and learn more
     about my work!
   </p>
+  <!-- These anchors navigate to other pages. They look like buttons through CSS,
+       while keeping the normal link behaviour that href provides. An element
+       can have several classes: the second link uses both button styles. -->
   <div class="button-container">
     <a href="/projects" class="button">View Projects</a>
     <a href="/contact" class="button button-secondary">Contact Me</a>
@@ -13,6 +21,11 @@
 </header>
 
 <style>
+  /* Astro scopes these rules to this component. A bare h1 selects its heading;
+     a dot, as in .accent, selects elements with that class instead.
+     clamp(min, preferred, max) lets 5vw (5% of viewport width) size the heading
+     between 2rem and 4rem. rem uses the root font size; em uses this element's.
+     Unitless line-height multiplies the font size to set the line spacing. */
   h1 {
     margin: 0;
     font-size: clamp(2rem, 5vw, 4rem);
@@ -20,10 +33,14 @@
     letter-spacing: -0.03em;
   }
 
+  /* var(...) reads a CSS custom property from the site's shared theme. */
   .accent {
     color: var(--color-accent);
   }
 
+  /* ch is approximately the width of a "0" in the font. This width limit keeps
+     the introduction readable. margin-block sets top and bottom outer spacing;
+     padding, used below, creates spacing inside an element instead. */
   .description {
     max-width: 65ch;
     margin-block: 1.5rem 2rem;
@@ -31,31 +48,42 @@
     font-size: 1.125rem;
   }
 
+  /* Flexbox puts the links in a row; wrapping lets them move onto another line
+     on narrow screens. gap supplies space between the items. */
   .button-container {
     display: flex;
     flex-wrap: wrap;
     gap: 1rem;
   }
 
+  /* inline-flex lets the link have flex alignment while retaining an inline
+     outer display. align-items and justify-content center its contents on the
+     two axes. A minimum height and padding make it comfortable to click/tap. */
   .button {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     min-height: 44px;
     padding: 0.75rem 1.5rem;
+    /* border is shorthand for width, style, and colour. */
     border: 1px solid var(--color-accent);
+    /* border-radius rounds the corners; var reads the shared 12px radius. */
     border-radius: var(--border-radius);
     background: var(--color-accent);
     color: var(--color-on-accent);
     font-weight: 600;
   }
 
+  /* The secondary link also has .button, so it inherits the dimensions above.
+     This equally specific rule comes later and overrides only these colours. */
   .button-secondary {
     color: var(--color-text);
     border-color: var(--color-border);
     background: var(--color-surface);
   }
 
+  /* :hover matches while a pointing device is over a link. brightness(1.15)
+     draws it at 115% brightness to provide a visible interaction cue. */
   .button:hover {
     filter: brightness(1.15);
   }

@@ -1,11 +1,17 @@
 {
+  // Version of VS Code's debug configuration format, not this site's version.
   "version": "0.2.0",
+  // Each object is a launch option offered in VS Code's Run and Debug panel.
   "configurations": [
     {
+      // Use the project's installed Astro executable. This existing editor
+      // command runs in a terminal; for agent-started servers, AGENTS.md
+      // requires `astro dev --background` instead.
       "command": "./node_modules/.bin/astro dev",
+      // name is the label shown in the editor, and request: launch starts it.
       "name": "Development server",
       "request": "launch",
-      "type": "node-terminal"
+      "type": "node-terminal" // Run/debug a command inside a Node-aware terminal.
     }
   ]
 }

@@ -1,18 +1,37 @@
 ---
+// Astro executes frontmatter while rendering HTML. import type brings in the
+// shape of an experience for editor checks without adding browser JavaScript.
 import type { Experience } from "../lib/experiences";
 
+// The parent passes a list through <ExperienceTimeline experiences={...} />.
+// Experience[] means an array whose entries must match the Experience type.
 interface Props {
   experiences: Experience[];
 }
 
+// Object destructuring extracts the named prop into a local constant.
 const { experiences } = Astro.props;
 ---
 
+<!-- A section groups the timeline. aria-labelledby/aria-describedby reference
+     element IDs rather than containing the actual label/help text. Those IDs
+     must exist in the rendered document for these references to work: the
+     current template has no timeline-heading or timeline-help target yet. -->
 <section class="experience-timeline" aria-labelledby="timeline-heading">
+  <!-- This region can scroll horizontally. tabindex="0" lets keyboard users
+       focus it, so they can scroll without needing a mouse or touch gesture. -->
   <div class="timeline-scroll" role="region" aria-label="Experience timeline" aria-describedby="timeline-help" tabindex="0">
+    <!-- ol describes an ordered sequence; each experience becomes one li. -->
     <ol class="timeline-list">
+      <!-- map transforms the data array into markup. Its callback receives the
+           current object and its zero-based index (0, 1, 2, ...). Parentheses
+           after the arrow return this multiline markup without a return word. -->
       {experiences.map((experience, index) => (
         <li class="timeline-item">
+          <!-- The entire card is a link. Template strings use backticks and
+               ${...} to make distinct IDs for each entry. The label uses its
+               title; the description references both the period and summary.
+               Curly braces evaluate expressions, and . accesses object fields. -->
           <a
             class="timeline-link"
             href={experience.href}
@@ -20,10 +39,13 @@ const { experiences } = Astro.props;
             aria-describedby={`experience-period-${index} experience-summary-${index}`}
           >
             <span class="timeline-period" id={`experience-period-${index}`}>{experience.period}</span>
+            <!-- The dot and track are decoration, so screen readers skip them. -->
             <span class="node-track" aria-hidden="true"><span class="timeline-node"></span></span>
             <div class="timeline-content">
               <span class="timeline-category">{experience.category}</span>
               <h3 id={`experience-title-${index}`}>{experience.title}</h3>
+              <!-- && includes the paragraph only for a truthy organization value,
+                   such as a nonempty string; optional metadata can stay absent. -->
               {experience.organization && <p class="timeline-organization">{experience.organization}</p>}
               <p class="timeline-summary" id={`experience-summary-${index}`}>{experience.summary}</p>
               <span class="read-story">Read the story <span aria-hidden="true">↗</span></span>
@@ -33,25 +55,38 @@ const { experiences } = Astro.props;
       ))}
     </ol>
   </div>
+  <!-- This hint is ordinary text; CSS hides it at wider viewport sizes. -->
   <p class="scroll-hint">Scroll horizontally to explore the timeline <span aria-hidden="true">→</span></p>
 </section>
 
 <style>
+  /* Astro scopes these selectors to this component. A dot selects a class;
+     space-separated selectors match descendants. rem uses the root font size,
+     and margin-block controls top/bottom outer space in this writing direction. */
   .experience-timeline {
     margin-block: 1rem 5rem;
   }
 
+  /* This rule would style an h2 inside .timeline-heading if that markup is added
+     to this component; there is currently no such element in its template. */
   .timeline-heading h2 {
     margin-block: 0 0.5rem;
     font-size: 1.125rem;
   }
 
+  /* Commas share declarations between selectors. var reads a theme variable;
+     the muted colour gives supporting text less emphasis than the titles. */
   .timeline-heading p,
   .scroll-hint {
     color: var(--color-muted);
     font-size: 0.875rem;
   }
 
+  /* overflow-x:auto enables a horizontal scrollbar when entries exceed the
+     available width. Padding leaves room around focus outlines; negative inline
+     margins compensate for that padding at the outer left/right edges.
+     x proximity gently snaps near a card instead of forcing every scroll stop.
+     scrollbar-color supplies the thumb colour followed by the track colour. */
   .timeline-scroll {
     overflow-x: auto;
     padding: 0.5rem;
@@ -59,14 +94,21 @@ const { experiences } = Astro.props;
     scroll-snap-type: x proximity;
     scrollbar-width: thin;
     scrollbar-color: var(--color-border) transparent;
+    /* The shared radius rounds this region's corners. */
     border-radius: var(--border-radius);
   }
 
+  /* :focus-visible provides an outline when keyboard focus needs to be shown.
+     Unlike a border, an outline does not change the element's layout dimensions. */
   .timeline-scroll:focus-visible {
     outline: 2px solid var(--color-accent);
     outline-offset: 2px;
   }
 
+  /* These custom properties keep the dot rows and connector lines aligned.
+     Grid creates new columns as items are added. minmax makes each column at
+     least 18rem wide; 1fr shares available extra space. min-width keeps a short
+     timeline as wide as its container. list-style removes ol's default numbers. */
   .timeline-list {
     --date-row: 2.5rem;
     --node-row: 3.5rem;
@@ -80,11 +122,18 @@ const { experiences } = Astro.props;
     list-style: none;
   }
 
+  /* position:relative provides a reference box for the absolute connector below.
+     scroll-snap-align identifies each card's starting edge as a snap target. */
   .timeline-item {
     position: relative;
     scroll-snap-align: start;
   }
 
+  /* ::before generates a decorative box without adding an HTML element.
+     content:"" is needed to create it. Absolute positioning takes the line out
+     of normal layout; inset-inline stretches it between both horizontal edges.
+     calc places it halfway through the dot row after padding and the date row.
+     color-mix blends the accent with the border colour in the sRGB colour space. */
   .timeline-item::before {
     content: "";
     position: absolute;
@@ -94,18 +143,25 @@ const { experiences } = Astro.props;
     background: color-mix(in srgb, var(--color-accent) 40%, var(--color-border));
   }
 
+  /* Trim the first line so it starts at its dot, halfway across that card. */
   .timeline-item:first-child::before {
     left: 50%;
   }
 
+  /* Trim the last line so it ends at its dot. */
   .timeline-item:last-child::before {
     right: 50%;
   }
 
+  /* With only one experience there is nothing to connect, so hide the line. */
   .timeline-item:only-child::before {
     display: none;
   }
 
+  /* The link's three grid rows align dates, dots, and content across the cards.
+     auto lets the last row grow to fit text. Relative positioning also places
+     this link after the connector in the normal painting order. height:100%
+     extends the clickable area through the item's full height. */
   .timeline-link {
     position: relative;
     display: grid;
@@ -116,17 +172,22 @@ const { experiences } = Astro.props;
     text-align: center;
   }
 
+  /* align-self centers this individual grid item within its date row. */
   .timeline-period {
     align-self: center;
     color: var(--color-muted);
     font-size: 0.875rem;
   }
 
+  /* place-items:center is shorthand for centering in both grid directions. */
   .node-track {
     display: grid;
     place-items: center;
   }
 
+  /* Equal dimensions plus a 50% radius produce a circle. box-shadow's values
+     here mean zero x/y offset, zero blur, and a 7px spread: a soft-coloured ring.
+     Mixing with transparent makes the accent halo less visually prominent. */
   .timeline-node {
     width: 12px;
     height: 12px;
@@ -135,12 +196,16 @@ const { experiences } = Astro.props;
     box-shadow: 0 0 0 7px color-mix(in srgb, var(--color-accent) 13%, transparent);
   }
 
+  /* ch limits readable line length using the font's approximate "0" width.
+     Auto inline margins center the content block within the available width. */
   .timeline-content {
     max-width: 30ch;
     margin-inline: auto;
     padding-top: 1.25rem;
   }
 
+  /* Small uppercase labels separate the category from the story title.
+     em letter-spacing is relative to this label's own font size. */
   .timeline-category {
     color: var(--color-muted);
     font-size: 0.75rem;
@@ -148,6 +213,8 @@ const { experiences } = Astro.props;
     text-transform: uppercase;
   }
 
+  /* clamp bounds a viewport-responsive title size. Unitless line-height scales
+     with that size; overflow-wrap prevents a long word from widening the card. */
   h3 {
     margin-block: 0.5rem 0.75rem;
     font-size: clamp(1.25rem, 2vw, 1.5rem);
@@ -155,16 +222,20 @@ const { experiences } = Astro.props;
     overflow-wrap: anywhere;
   }
 
+  /* A moderately heavier organization name sits between the title and summary. */
   .timeline-organization {
     margin-block: 0.5rem;
     font-weight: 500;
   }
 
+  /* Keep summary text smaller and less prominent than the title. */
   .timeline-summary {
     color: var(--color-muted);
     font-size: 0.9375rem;
   }
 
+  /* inline-block accepts vertical padding while remaining in inline flow.
+     This text hints that clicking the whole card opens a detailed story. */
   .read-story {
     display: inline-block;
     padding-block: 0.5rem;
@@ -172,21 +243,28 @@ const { experiences } = Astro.props;
     font-weight: 600;
   }
 
+  /* Hovering the card or focusing its link changes the descendant dot.
+     Comma-separated shadows create three concentric rings, drawn front to back.
+     Using both states gives pointer and keyboard users the same visual cue. */
   .timeline-link:hover .timeline-node,
   .timeline-link:focus-visible .timeline-node {
     box-shadow: 0 0 0 2px var(--color-bg), 0 0 0 3px var(--color-accent), 0 0 0 11px color-mix(in srgb, var(--color-accent) 16%, transparent);
   }
 
+  /* The same parent states underline the call to action inside the card. */
   .timeline-link:hover .read-story,
   .timeline-link:focus-visible .read-story {
     text-decoration: underline;
     text-underline-offset: 0.25rem;
   }
 
+  /* Leave a small gap between the scrolling region and its hint text. */
   .scroll-hint {
     margin-top: 0.5rem;
   }
 
+  /* A media query applies its nested rule only at viewport widths of 50rem or
+     more. display:none removes the hint from layout and the accessibility tree. */
   @media (min-width: 50rem) {
     .scroll-hint {
       display: none;

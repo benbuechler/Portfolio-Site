@@ -1,10 +1,16 @@
 ---
+// pages/experience.astro becomes /experience. Import the shared shell, a
+// reusable timeline component, and the named array of Markdown page summaries.
+// Frontmatter prepares this static page at build time, outside the browser.
 import BaseLayout from "../layouts/BaseLayout.astro";
 import ExperienceTimeline from "../components/ExperienceTimeline.astro";
 import { experiences } from "../lib/experiences";
 ---
 
+<!-- Props supply metadata; this layout's slot receives the markup inside it. -->
 <BaseLayout title="Experience" description="Explore Ben Buechler’s electrical engineering experience, process, and results.">
+  <!-- Shared global.css classes style the intro. The inline span isolates the
+       decorative full stop so the scoped CSS below can give it an accent colour. -->
   <header class="page-heading">
     <p class="eyebrow">Experience</p>
     <h1>My journey in the professional world<span class="accent">.</span></h1>
@@ -14,10 +20,14 @@ import { experiences } from "../lib/experiences";
     </p>
   </header>
 
+  <!-- {experiences} passes an array, rather than a quoted string. The component
+       handles the repeated cards and links to the individual Markdown stories. -->
   <ExperienceTimeline experiences={experiences} />
 </BaseLayout>
 
 <style>
+  /* This rule applies to this component's .accent only. var() reads the
+     reusable theme colour defined in global.css. */
   .accent {
     color: var(--color-accent);
   }
