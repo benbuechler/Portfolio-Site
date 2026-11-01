@@ -27,12 +27,25 @@ TypeScript, and Astro features used throughout the project.
 
 ## Changing the home-page highlight
 
-Edit [home-highlight.ts](src/lib/home-highlight.ts) to choose the page you are
-currently working on. Set its `title`, `summary`, `category`, and `href` (the
-page URL, such as `/projects/personal-portfolio`). The
-[PageHighlight component](src/components/PageHighlight.astro) renders that
-content below the home-page introduction. You choose this feature manually;
-changing another file does not automatically replace it.
+Edit [home-highlight.ts](src/lib/home-highlight.ts) to feature any page: an
+experience story, a project, or a regular page. Set `title`, `summary`, and
+`href`. The title and summary are your own preview text; they do not have to
+match the destination page's metadata. `category` is optional and is hidden
+when omitted. Set `linkLabel`, such as `"Read the story"`, to customize the
+link text; it defaults to `"Read the page"`.
+
+Use the visitor-facing URL for `href`, without `src/pages/` or the `.astro` or
+`.md` extension:
+
+| Source file | `href` |
+| --- | --- |
+| `src/pages/experience/engineering-studies.md` | `/experience/engineering-studies` |
+| `src/pages/projects/voron.md` | `/projects/voron` |
+| `src/pages/contact.astro` | `/contact` |
+
+The [PageHighlight component](src/components/PageHighlight.astro) renders this
+content below the home-page introduction. You choose the feature and its preview
+text manually; changing another page does not automatically replace them.
 
 ## Home-page map motion
 

@@ -17,8 +17,8 @@ const { page } = Astro.props;
      h2 follows the introduction's h1; the featured page title is an h3. -->
 <section class="page-highlight" aria-labelledby="page-highlight-heading">
   <div class="highlight-heading">
-    <p class="eyebrow">Latest update</p>
-    <h2 id="page-highlight-heading">What I’m working on</h2>
+    <p class="eyebrow">In focus</p>
+    <h2 id="page-highlight-heading">Featured page</h2>
   </div>
 
   <!-- The entire card is one native link, so it works without browser scripts.
@@ -26,13 +26,13 @@ const { page } = Astro.props;
        concise link name and a separate description for assistive technology. -->
   <a class="highlight-card" href={page.href} aria-labelledby="page-highlight-title" aria-describedby="page-highlight-summary">
     <div class="highlight-content">
-      <p class="highlight-category">{page.category}</p>
+      {page.category && <p class="highlight-category">{page.category}</p>}
       <h3 id="page-highlight-title">{page.title}</h3>
       <p class="highlight-summary" id="page-highlight-summary">{page.summary}</p>
     </div>
     <!-- This call to action belongs to the same link, rather than nesting a
          second link or button. The arrow is decoration, not extra spoken text. -->
-    <span class="highlight-read">Read the page <span aria-hidden="true">↗</span></span>
+    <span class="highlight-read">{page.linkLabel ?? "Read the page"} <span aria-hidden="true">↗</span></span>
   </a>
 </section>
 

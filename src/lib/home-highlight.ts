@@ -3,21 +3,25 @@
 // the component's HTML or CSS in components/PageHighlight.astro.
 
 // An interface describes the fields TypeScript expects on the highlight object.
-// Each field is a string, and all four are required.
+// Title, summary, and destination are required; the label text is optional.
 export interface HomeHighlight {
   title: string;
   summary: string;
   href: string;
-  category: string;
+  category?: string;
+  linkLabel?: string;
 }
 
 // export lets index.astro import this object. The : HomeHighlight annotation
 // helps the editor catch missing fields or values of the wrong type.
 export const homeHighlight: HomeHighlight = {
-  title: "Building this portfolio",
+  title: "The turning point of my life",
   summary:
-    "The story behind this site: building an explorable network of experiences, experimenting with Astro, and learning along the way.",
-  // href is the page's URL, rather than its src/pages/ filename.
-  href: "/projects/personal-portfolio",
-  category: "Personal project",
+    "The story behind my path to engineering, and how I got to where I am today.",
+  // Use any page's public URL, without src/pages/ or a .md/.astro extension.
+  // Examples: /projects/voron, /experience/engineering-studies, or /contact.
+  href: "/experience/engineering-studies",
+  category: "Personal story",
+  // Optional: the default is "Read the page". Choose wording for this feature.
+  linkLabel: "Read the story",
 };
