@@ -11,10 +11,12 @@ category: Education
 period: 2019 - 2024
 # Smaller numbers come first, so this entry precedes the entry with order 10.
 sortOrder: 9
+# Show this milestone on the timeline without linking to a full story.
+hasStory: true
 ---
 
 <!-- Its location under src/pages produces /experience/business-degree.
      ## creates an h2 below the h1 that ExperienceLayout supplies from title.
      HTML comments like this one explain the source without visible page text. -->
-## I need to find time between calculus and crying to write this page.
+## I need to find time between calculus and not sleeping to write this page.
 

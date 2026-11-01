@@ -23,36 +23,40 @@ const { experiences } = Astro.props;
   <div class="timeline-scroll" role="region" aria-label="Experience timeline" aria-describedby="timeline-help" tabindex="0">
     <!-- ol describes an ordered sequence; each experience becomes one li. -->
     <ol class="timeline-list">
-      <!-- map transforms the data array into markup. Its callback receives the
-           current object and its zero-based index (0, 1, 2, ...). Parentheses
-           after the arrow return this multiline markup without a return word. -->
-      {experiences.map((experience, index) => (
-        <li class="timeline-item">
-          <!-- The entire card is a link. Template strings use backticks and
-               ${...} to make distinct IDs for each entry. The label uses its
-               title; the description references both the period and summary.
-               Curly braces evaluate expressions, and . accesses object fields. -->
-          <a
-            class="timeline-link"
-            href={experience.href}
-            aria-labelledby={`experience-title-${index}`}
-            aria-describedby={`experience-period-${index} experience-summary-${index}`}
-          >
-            <span class="timeline-period" id={`experience-period-${index}`}>{experience.period}</span>
-            <!-- The dot and track are decoration, so screen readers skip them. -->
-            <span class="node-track" aria-hidden="true"><span class="timeline-node"></span></span>
-            <div class="timeline-content">
-              <span class="timeline-category">{experience.category}</span>
-              <h3 id={`experience-title-${index}`}>{experience.title}</h3>
-              <!-- && includes the paragraph only for a truthy organization value,
-                   such as a nonempty string; optional metadata can stay absent. -->
-              {experience.organization && <p class="timeline-organization">{experience.organization}</p>}
-              <p class="timeline-summary" id={`experience-summary-${index}`}>{experience.summary}</p>
-              <span class="read-story">Read the story <span aria-hidden="true">↗</span></span>
-            </div>
-          </a>
-        </li>
-      ))}
+      <!-- map transforms each experience and its zero-based index into a card.
+           The callback chooses a tag, then returns the card's markup. -->
+      {experiences.map((experience, index) => {
+        // Timeline-only entries use a plain group, so they have no link or tab
+        // stop. Missing hasStory preserves the existing linked-card behavior.
+        const hasStory = experience.hasStory !== false;
+        const Card = hasStory ? "a" : "div";
+        return (
+          <li class="timeline-item">
+            <!-- Only entries with a story become links. Both card variants keep
+                 the same layout, title, period, and summary. -->
+            <Card
+              class:list={["timeline-card", { "timeline-link": hasStory }]}
+              href={hasStory ? experience.href : undefined}
+              role={hasStory ? undefined : "group"}
+              aria-labelledby={`experience-title-${index}`}
+              aria-describedby={`experience-period-${index} experience-summary-${index}`}
+            >
+              <span class="timeline-period" id={`experience-period-${index}`}>{experience.period}</span>
+              <!-- The dot and track are decoration, so screen readers skip them. -->
+              <span class="node-track" aria-hidden="true"><span class="timeline-node"></span></span>
+              <div class="timeline-content">
+                <span class="timeline-category">{experience.category}</span>
+                <h3 id={`experience-title-${index}`}>{experience.title}</h3>
+                <!-- && includes the paragraph only for a truthy organization value,
+                     such as a nonempty string; optional metadata can stay absent. -->
+                {experience.organization && <p class="timeline-organization">{experience.organization}</p>}
+                <p class="timeline-summary" id={`experience-summary-${index}`}>{experience.summary}</p>
+                {hasStory && <span class="read-story">Read the story <span aria-hidden="true">↗</span></span>}
+              </div>
+            </Card>
+          </li>
+        );
+      })}
     </ol>
   </div>
   <!-- This hint is ordinary text; CSS hides it at wider viewport sizes. -->
@@ -158,11 +162,10 @@ const { experiences } = Astro.props;
     display: none;
   }
 
-  /* The link's three grid rows align dates, dots, and content across the cards.
-     auto lets the last row grow to fit text. Relative positioning also places
-     this link after the connector in the normal painting order. height:100%
-     extends the clickable area through the item's full height. */
-  .timeline-link {
+  /* Both card variants use three grid rows to align dates, dots, and content.
+     auto lets the last row grow to fit text. Relative positioning places the
+     card above the connector; height:100% fills the item's height. */
+  .timeline-card {
     position: relative;
     display: grid;
     grid-template-rows: var(--date-row) var(--node-row) auto;

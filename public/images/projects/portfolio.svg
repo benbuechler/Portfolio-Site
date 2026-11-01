@@ -1,0 +1,58 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="960" height="600" viewBox="0 0 960 600" role="img" aria-labelledby="title description">
+  <title id="title">An explorable portfolio</title>
+  <desc id="description">A blue network connects Home to Projects, Experience, Blog, and Contact, with faint orbital rings around the site map.</desc>
+  <defs>
+    <radialGradient id="glow">
+      <stop stop-color="#2563ff" stop-opacity=".13"/>
+      <stop offset="1" stop-color="#2563ff" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+  <rect width="960" height="600" fill="#1a1a1a"/>
+  <circle cx="480" cy="310" r="300" fill="url(#glow)"/>
+  <g fill="none" stroke="#263249">
+    <rect x="24.5" y="24.5" width="911" height="551" rx="16"/>
+    <path d="M25 91.5H935M25 519.5H935"/>
+  </g>
+  <g font-family="system-ui, sans-serif">
+    <text x="56" y="65" fill="#a9b1c2" font-size="15" font-weight="600" letter-spacing="2">EXPLORE THE SITE</text>
+    <g fill="#2563ff">
+      <circle cx="870" cy="59" r="4"/>
+      <circle cx="888" cy="59" r="4" opacity=".5"/>
+      <circle cx="906" cy="59" r="4" opacity=".25"/>
+    </g>
+    <g fill="none" stroke="#2563ff" stroke-dasharray="3 7" opacity=".22">
+      <ellipse cx="480" cy="306" rx="245" ry="179"/>
+      <ellipse cx="480" cy="306" rx="96" ry="205" transform="rotate(-36 480 306)"/>
+      <ellipse cx="480" cy="306" rx="96" ry="205" transform="rotate(44 480 306)"/>
+    </g>
+    <g fill="none" stroke="#2563ff" stroke-width="1.5" opacity=".45">
+      <path d="M480 310 289 244 205 190M289 244 236 344M480 310 616 204M480 310 681 351M480 310 378 437"/>
+    </g>
+    <path d="M480 310 616 204" fill="none" stroke="#5d8bff" stroke-width="2"/>
+    <g fill="#2563ff" opacity=".13">
+      <circle cx="480" cy="310" r="23"/>
+      <circle cx="289" cy="244" r="15"/>
+      <circle cx="616" cy="204" r="23"/>
+      <circle cx="681" cy="351" r="15"/>
+      <circle cx="378" cy="437" r="15"/>
+    </g>
+    <g fill="#2563ff" stroke="#1a1a1a" stroke-width="3">
+      <circle cx="480" cy="310" r="9"/>
+      <circle cx="289" cy="244" r="7"/>
+      <circle cx="616" cy="204" r="8" fill="#75a0ff"/>
+      <circle cx="681" cy="351" r="7"/>
+      <circle cx="378" cy="437" r="7"/>
+      <circle cx="205" cy="190" r="5" opacity=".6"/>
+      <circle cx="236" cy="344" r="5" opacity=".6"/>
+    </g>
+    <g fill="#f4f6fa" font-size="20" font-weight="500">
+      <text x="459" y="317" text-anchor="end">Home</text>
+      <text x="309" y="251">Experience</text>
+      <text x="637" y="211" fill="#a6bfff">Projects</text>
+      <text x="701" y="358">Blog</text>
+      <text x="398" y="444">Contact</text>
+    </g>
+    <text x="56" y="554" fill="#a9b1c2" font-size="15">Ben Buechler</text>
+    <text x="904" y="554" text-anchor="end" fill="#a9b1c2" font-size="15">Astro · TypeScript</text>
+  </g>
+</svg>

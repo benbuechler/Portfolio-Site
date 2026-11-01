@@ -11,6 +11,8 @@ export interface ExperienceFrontmatter {
   period: string;
   // ? makes this field optional; reading it can produce a string or undefined.
   organization?: string;
+  // Omit or set true for a linked story; false shows only the timeline card.
+  hasStory?: boolean;
   // A number sorts numerically, unlike text such as "1", "10", "2".
   sortOrder: number;
 }
@@ -45,9 +47,13 @@ export const experiences: Experience[] = Object.entries(pages)
     if (!page.url || /^[_.]/.test(filename) || /[\[\]]/.test(filename)) return [];
 
     // Object destructuring copies these property values into local variables.
-    const { title, summary, category, period, organization, sortOrder } = page.frontmatter;
+    const { title, summary, category, period, organization, sortOrder, hasStory = true } = page.frontmatter;
+    // YAML booleans use true/false without quotes. Reject accidental strings.
+    if (typeof hasStory !== "boolean") {
+      throw new Error(`Experience "${filename}" needs hasStory to be true or false without quotes.`);
+    }
     // Property shorthand uses each variable's name as its object key.
-    return [{ href: page.url, title, summary, category, period, organization, sortOrder }];
+    return [{ href: page.url, title, summary, category, period, organization, sortOrder, hasStory }];
   })
   // A negative difference puts a before b; a positive difference puts b first.
   // If the difference is 0 (falsy), || falls back to alphabetical title order.

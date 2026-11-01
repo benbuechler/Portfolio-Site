@@ -27,12 +27,9 @@ I’ve always wanted a place to introduce myself, share my work, and document th
 
 I wanted to create something that could grow and evolve alongside me, reflecting my experiences, interests, and ideas as they develop. That's where the inspiration for this website began: the concept of an explorable brain, where every neuron represents a different part of who I am. Each connection tells a story, and as I continue to learn and explore, the network grows with me.
 
-<!-- Another h2 starts the next section of this same story. -->
 ## The site so far
 
 This portfolio was built using Astro. I'm by no means a front-end developer, nor do I claim to be. I fully acknowledge and embrace the fact that many of the more complex components of this website were created with the help of AI tools. For me, the goal wasn't to prove that I could write every line of code myself, but to take an idea I had envisioned and bring it to life. Along the way, I've been able to experiment, solve problems, and learn more about web development than I would have otherwise.
-
-<!-- These sections are page content, not additional URLs or timeline entries. -->
 
 ## Growing with my work
 

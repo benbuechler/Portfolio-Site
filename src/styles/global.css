@@ -303,15 +303,81 @@ a {
   text-underline-offset: 0.5rem;
 }
 
-/* The text brand is larger and heavier than ordinary navigation links. */
+/* Both spans share one grid cell. The invisible full name reserves its width,
+   so the nav keeps the same layout throughout the letter reveal. */
 .logo {
+  display: inline-grid;
+  flex-shrink: 0;
   font-size: 2.5rem;
   font-weight: 800;
+  white-space: nowrap;
 }
 
-/* Colour only the span inside the brand (the decorative full stop). */
-.logo span {
+.logo-size,
+.logo-wordmark {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  align-items: baseline;
+  justify-self: start;
+}
+
+.logo-size {
+  visibility: hidden;
+  pointer-events: none;
+}
+
+/* Animate intrinsic text widths with grid tracks, avoiding a switch between
+   zero and auto widths. Clipping keeps the hidden letters out of the initials. */
+.logo-reveal {
+  display: inline-grid;
+  grid-template-columns: 0fr;
+  opacity: 0;
+  transition: grid-template-columns 450ms cubic-bezier(0.22, 1, 0.36, 1), opacity 300ms ease;
+}
+
+.logo-reveal > span {
+  min-width: 0;
+  overflow: hidden;
+  white-space: pre;
+}
+
+/* Only the decorative period uses the accent colour. */
+.logo-dot {
   color: var(--color-accent);
+}
+
+/* Keyboard focus offers the same reveal. Hover is limited to devices that
+   support it, so tapping the home link does not leave a sticky hover state. */
+.logo:focus-visible .logo-reveal {
+  grid-template-columns: 1fr;
+  opacity: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .logo:hover .logo-reveal {
+    grid-template-columns: 1fr;
+    opacity: 1;
+  }
+}
+
+/* Leave room for the full name beside desktop links near the menu breakpoint,
+   and beside both mobile controls on narrow screens. */
+@media (min-width: 769px) and (max-width: 900px) {
+  .logo {
+    font-size: 2rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .logo {
+    font-size: clamp(1.5rem, 7.5vw, 2.25rem);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .logo-reveal {
+    transition: none;
+  }
 }
 
 

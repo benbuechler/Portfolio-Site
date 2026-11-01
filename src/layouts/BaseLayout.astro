@@ -83,7 +83,12 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     <header class="site-header">
       <!-- nav identifies a navigation landmark; aria-label gives it a useful name. -->
       <nav class="site-nav" aria-label="Main navigation">
-        <a class="logo" href="/" aria-label="Ben Buechler home">BB<span>.</span></a>
+        <a class="logo" href="/" aria-label="Ben Buechler home">
+          <!-- Keep the initials and reveal the remaining letters. The invisible
+               copy reserves space so expanding the name never moves the menu. -->
+          <span class="logo-size" aria-hidden="true">B<span>en&nbsp;</span>B<span>uechler</span><span>.</span></span>
+          <span class="logo-wordmark" aria-hidden="true">B<span class="logo-reveal"><span>en&nbsp;</span></span>B<span class="logo-reveal"><span>uechler</span></span><span class="logo-dot">.</span></span>
+        </a>
         <div class="nav-links" id="nav-links">
           <!-- map returns one anchor per object. ({ href, label }) destructures
                each object; the arrow function's parentheses return its markup.

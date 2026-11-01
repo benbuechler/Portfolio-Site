@@ -34,6 +34,45 @@ page URL, such as `/experience/building-this-portfolio`). The
 content below the home-page introduction. You choose this feature manually;
 changing another file does not automatically replace it.
 
+## Adding projects
+
+The `/projects` hub displays a picture, title, and summary for each project.
+Each card opens that project's own page, using the same Markdown approach as
+the blog and experience stories.
+
+1. Copy [the project template](src/pages/projects/_template.md) to a new `.md`
+   file in the same folder, for example `my-project.md`.
+2. Set `title`, `summary`, `image`, and `imageAlt` in the YAML frontmatter.
+   Put the picture in `public/images/projects/` and use its public URL, such as
+   `/images/projects/my-project.jpg`. `imageAlt` describes the picture.
+3. Optionally add `tools` labels and a numeric `sortOrder`. Smaller numbers
+   appear first; omitted values default to `0`, with titles breaking ties.
+4. Keep the `layout` value and replace the Markdown body with your write-up.
+   Use `##` for sections; the layout supplies the title and cover picture.
+5. Save. `/projects/my-project`, its hub card, and its home-page map node are
+   discovered automatically. Keep filenames prefixed with `_` while drafting
+   to exclude them from all three places.
+
+[The portfolio project](src/pages/projects/personal-portfolio.md) is the first
+entry. [ProjectLayout](src/layouts/ProjectLayout.astro) styles the detail pages;
+[projects.astro](src/pages/projects.astro) discovers and displays their cards.
+The hub uses three columns on large screens, two on medium screens, and one
+on phones. Covers are cropped to a consistent 8:5 ratio.
+
+## Showing an experience without a story
+
+Add this YAML field to an experience file in `src/pages/experience/` when you
+only want its summary displayed on the timeline:
+
+```yaml
+hasStory: false
+```
+
+The entry stays on the timeline, with its title, period, and summary, but its
+card is not clickable and “Read the story” is hidden. Omit the field or set
+`hasStory: true` to keep the story link. The
+[experience template](src/pages/experience/_template.md) includes this option.
+
 ## Writing blog entries
 
 The blog lives at `/blog`. Each entry is a Markdown file in `src/pages/blog/`,

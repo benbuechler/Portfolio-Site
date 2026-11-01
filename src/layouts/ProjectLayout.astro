@@ -1,0 +1,209 @@
+---
+// Markdown project pages share this heading, cover image, and reading layout.
+import BaseLayout from "./BaseLayout.astro";
+import type { ProjectFrontmatter } from "../lib/projects";
+
+interface Props {
+  frontmatter: ProjectFrontmatter;
+}
+
+const { title, summary, image, imageAlt, tools = [] } = Astro.props.frontmatter;
+// Include Astro's base path so links and public images also work in a subfolder.
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const projectsHref = `${basePath}/projects`;
+---
+
+<BaseLayout title={title} description={summary}>
+  <article class="project-article">
+    <a class="back-link text-link" href={projectsHref}><span aria-hidden="true">←</span> Back to projects</a>
+
+    <header class="project-heading">
+      <p class="eyebrow">Project</p>
+      <h1>{title}</h1>
+      <p class="project-summary">{summary}</p>
+      {tools.length > 0 && (
+        <ul class="tag-list" aria-label="Tools and technologies">
+          {tools.map((tool) => <li>{tool}</li>)}
+        </ul>
+      )}
+    </header>
+
+    <figure class="project-cover">
+      <!-- Public image paths omit the public/ folder. Explicit dimensions
+           reserve space before loading; CSS keeps the cover responsive. -->
+      <img src={`${basePath}${image}`} alt={imageAlt} width="1200" height="750" />
+    </figure>
+
+    <div class="project-body">
+      <!-- The Markdown body becomes HTML here. Start its sections with ##;
+           the project title above already supplies this page's h1. -->
+      <slot />
+    </div>
+
+    <footer class="project-footer">
+      <a class="text-link" href={projectsHref}><span aria-hidden="true">←</span> All projects</a>
+    </footer>
+  </article>
+</BaseLayout>
+
+<style>
+  .project-article {
+    max-width: 75rem;
+    min-width: 0;
+    margin-block: 2rem 5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .back-link {
+    margin-bottom: 2rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .project-heading,
+  .project-body,
+  .project-footer {
+    max-width: 75ch;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2rem, 5vw, 3.75rem);
+    line-height: 1.15;
+    letter-spacing: -0.03em;
+  }
+
+  .project-summary {
+    margin-block: 1.5rem;
+    color: var(--color-muted);
+    font-size: 1.125rem;
+  }
+
+  .tag-list {
+    margin-block: 1.5rem 0;
+  }
+
+  .project-cover {
+    margin: 2rem 0;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+  }
+
+  .project-cover img {
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 8 / 5;
+    object-fit: cover;
+  }
+
+  .project-body {
+    padding-bottom: 2rem;
+    line-height: 1.8;
+  }
+
+  /* Markdown is rendered outside this component's CSS scope. :global reaches
+     that generated HTML while .project-body limits the rules to this article. */
+  .project-body :global(h2),
+  .project-body :global(h3) {
+    margin-block: 2rem 0.75rem;
+    color: var(--color-text);
+    line-height: 1.3;
+    scroll-margin-top: 2rem;
+  }
+
+  .project-body :global(h2) {
+    font-size: 1.5rem;
+  }
+
+  .project-body :global(h3) {
+    font-size: 1.25rem;
+  }
+
+  .project-body :global(p),
+  .project-body :global(ul),
+  .project-body :global(ol) {
+    margin-block: 1rem;
+    color: var(--color-muted);
+  }
+
+  .project-body :global(ul),
+  .project-body :global(ol) {
+    padding-inline-start: 1.5rem;
+  }
+
+  .project-body :global(li) {
+    margin-block: 0.35rem;
+  }
+
+  .project-body :global(a) {
+    color: var(--color-text);
+    text-decoration: underline;
+    text-underline-offset: 0.25rem;
+  }
+
+  .project-body :global(blockquote) {
+    margin: 1.5rem 0;
+    padding-inline-start: 1.25rem;
+    border-inline-start: 3px solid var(--color-accent);
+    font-style: italic;
+  }
+
+  .project-body :global(code) {
+    padding: 0.15em 0.35em;
+    border-radius: 4px;
+    background: var(--color-surface);
+    font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
+    font-size: 0.875em;
+  }
+
+  .project-body :global(pre) {
+    max-width: 100%;
+    overflow-x: auto;
+    padding: 1.25rem;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    line-height: 1.6;
+  }
+
+  .project-body :global(pre code) {
+    padding: 0;
+    background: transparent;
+  }
+
+  .project-body :global(img) {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    border-radius: var(--border-radius);
+  }
+
+  .project-body :global(table) {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+    margin-block: 1.5rem;
+    border-collapse: collapse;
+  }
+
+  .project-body :global(th),
+  .project-body :global(td) {
+    padding: 0.65rem 1rem;
+    border: 1px solid var(--color-border);
+    text-align: start;
+  }
+
+  .project-body :global(hr) {
+    margin-block: 2rem;
+    border: 0;
+    border-top: 1px solid var(--color-border);
+  }
+
+  .project-footer {
+    padding-top: 1.5rem;
+    border-top: 1px solid var(--color-border);
+  }
+</style>
