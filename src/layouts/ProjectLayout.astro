@@ -74,14 +74,7 @@ const projectsHref = `${basePath}/projects`;
     align-items: start;
   }
 
-  .project-layout.has-gallery {
-    grid-template-columns: minmax(0, 1.4fr) minmax(17rem, 1fr);
-    column-gap: clamp(2rem, 5vw, 4rem);
-  }
-
   .project-media {
-    grid-column: 2;
-    grid-row: 1 / span 3;
     min-width: 0;
   }
 
@@ -224,16 +217,44 @@ const projectsHref = `${basePath}/projects`;
     border-top: 1px solid var(--color-border);
   }
 
-  /* Stack photos directly after the heading, before the story, on phones and
-     tablets. With no photos, no sidebar or empty image space is rendered. */
-  @media (max-width: 960px) {
+  @media (min-width: 961px) {
+    /* Floats let individual lines use the space below the gallery. flow-root
+       contains the floats so tall galleries stay inside the article. */
     .project-layout.has-gallery {
-      grid-template-columns: minmax(0, 1fr);
+      --gallery-gap: clamp(2rem, 5vw, 4rem);
+      display: flow-root;
+    }
+
+    /* Keep the heading and gallery aligned without changing reading order. */
+    .has-gallery .project-heading {
+      float: left;
+      width: calc((100% - var(--gallery-gap)) * 7 / 12);
     }
 
     .project-media {
-      grid-column: 1;
-      grid-row: auto;
+      float: right;
+      width: calc((100% - var(--gallery-gap)) * 5 / 12);
+      margin: 0 0 1.5rem var(--gallery-gap);
+    }
+
+    /* Keep this a normal block so its lines can wrap around the gallery. */
+    .has-gallery .project-body {
+      clear: left;
+      max-width: none;
+      /* Preserve the first section's margin after clearing the heading. */
+      padding-top: 1px;
+    }
+
+    .has-gallery .project-footer {
+      clear: both;
+      max-width: none;
+    }
+  }
+
+  /* Stack photos directly after the heading, before the story, on phones and
+     tablets. With no photos, no sidebar or empty image space is rendered. */
+  @media (max-width: 960px) {
+    .project-media {
       margin-block: 1.5rem 0;
     }
   }

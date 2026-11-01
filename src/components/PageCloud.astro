@@ -163,7 +163,7 @@ const { nodes } = createPageCloud(pages);
       let previousDriftTime: number | undefined;
       let resumeAfter = 0;
       let resumeTimer: ReturnType<typeof setTimeout> | undefined;
-      const driftSpeed = 0.035; // Maximum radians per second for the gentle drift.
+      const driftSpeed = 0.06; // Maximum radians per second for the gentle drift.
       let directionRemaining = 0;
       let yawVelocity = 0;
       let pitchVelocity = 0;
