@@ -1,10 +1,11 @@
 // A type-only import helps TypeScript check values; it is erased from compiled JS.
 // MarkdownInstance is Astro's description of an imported Markdown page module.
 import type { MarkdownInstance } from "astro";
+import type { GalleryMetadata } from "./gallery";
 
 // Frontmatter is the YAML metadata between --- lines at the top of a .md file.
 // This interface tells the editor which fields each experience is expected to have.
-export interface ExperienceFrontmatter {
+export interface ExperienceFrontmatter extends GalleryMetadata {
   title: string;
   summary: string;
   category: string;

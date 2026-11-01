@@ -25,9 +25,11 @@ pages and arranges them into an interactive 3D network, drawn with Canvas.
 Dragging rotates the map, while ordinary links let visitors open each page.
 Keyboard controls and rotation buttons provide other ways to explore it.
 
-The rest of the site brings together project write-ups, an experience timeline,
-a blog, and contact information. Markdown files keep the writing separate from
-the layouts, so adding a project or entry also adds it to its hub and the home-page map.
+The rest of the site brings together project stories and updates, an experience
+timeline, and contact information. Markdown files keep the writing separate from
+the layouts, so adding a project also adds it to its hub and the home-page map.
+Each project page is a place to document progress, experiments, and lessons as
+the work develops.
 
 ## What I’m learning
 

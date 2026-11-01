@@ -1,19 +1,20 @@
 ---
-import type { ProjectImage } from "../lib/projects";
+import type { GalleryImage } from "../lib/gallery";
 
 interface Props {
-  images: ProjectImage[];
+  images: GalleryImage[];
+  subject?: string;
 }
 
-const { images } = Astro.props;
+const { images, subject = "Project" } = Astro.props;
 // Metadata uses public-root paths. Add the configured base for subfolder hosting.
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src}` }));
 ---
 
 {pictures.length > 0 && (
-  <project-gallery role="region" aria-label="Project photographs">
-    <h2 class="gallery-heading">Project photos</h2>
+  <project-gallery role="region" aria-label={`${subject} photographs`}>
+    <h2 class="gallery-heading">{subject} photos</h2>
     <div class="gallery-grid">
       {pictures.map((image, index) => (
         <figure class:list={["gallery-photo", { "gallery-feature": index === 0 }]}>
@@ -39,7 +40,7 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
 
     {/* showModal puts this above the pinned navigation and makes the rest of
         the document inert. Escape and Tab follow the browser's dialog behavior. */}
-    <dialog class="gallery-dialog" aria-label="Project photo viewer">
+    <dialog class="gallery-dialog" aria-label={`${subject} photo viewer`}>
       <div class="lightbox-panel">
         <div class="lightbox-toolbar">
           <p class="lightbox-counter" data-counter role="status" aria-live="polite" aria-atomic="true">Photo 1 of {pictures.length}</p>
@@ -52,7 +53,7 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
           <figcaption data-large-caption hidden={!pictures[0].caption}>{pictures[0].caption}</figcaption>
         </figure>
         {pictures.length > 1 && (
-          <div class="lightbox-navigation" role="group" aria-label="Browse project photos">
+          <div class="lightbox-navigation" role="group" aria-label={`Browse ${subject.toLowerCase()} photos`}>
             <button type="button" class="lightbox-button" data-previous><span aria-hidden="true">←</span> Previous</button>
             <button type="button" class="lightbox-button" data-next>Next <span aria-hidden="true">→</span></button>
           </div>

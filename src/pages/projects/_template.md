@@ -56,3 +56,13 @@ Share what worked, what you tested, and what you learned along the way.
 ## What’s next
 
 Describe any improvements or questions you want to explore next.
+
+<!-- Optional: keep ongoing notes on this project page. Add the newest update
+     first, using a dated ### heading. Remove this section if you do not need it. -->
+
+## Progress updates
+
+### Month Day, Year — Update title
+
+Describe what changed, what you tried, and what you learned. Add photos or code
+where they help explain the work.

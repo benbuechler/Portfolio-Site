@@ -1,7 +1,7 @@
 # Ben's portfolio: a guide to the code
 
-This Astro portfolio has a home page, projects, a blog, contact information, and
-experience stories. Source comments explain the HTML, CSS, JavaScript,
+This Astro portfolio has a home page, project stories and updates, contact
+information, and experience stories. Source comments explain the HTML, CSS, JavaScript,
 TypeScript, and Astro features used throughout the project.
 
 ## A useful reading order
@@ -29,7 +29,7 @@ TypeScript, and Astro features used throughout the project.
 
 Edit [home-highlight.ts](src/lib/home-highlight.ts) to choose the page you are
 currently working on. Set its `title`, `summary`, `category`, and `href` (the
-page URL, such as `/experience/building-this-portfolio`). The
+page URL, such as `/projects/personal-portfolio`). The
 [PageHighlight component](src/components/PageHighlight.astro) renders that
 content below the home-page introduction. You choose this feature manually;
 changing another file does not automatically replace it.
@@ -50,7 +50,7 @@ to resume explicitly. The `driftSpeed` value in
 
 The `/projects` hub displays a title, summary, and optional picture for each project.
 Each card opens that project's own page, using the same Markdown approach as
-the blog and experience stories.
+the experience stories. Project pages hold both the build story and ongoing notes.
 
 1. Copy [the project template](src/pages/projects/_template.md) to a new `.md`
    file in the same folder, for example `my-project.md`.
@@ -85,6 +85,32 @@ shows the full photo in a right sidebar on desktop, stacked with the write-up
 on mobile. Click a thumbnail to expand the gallery; use Previous/Next or the
 left/right arrow keys to browse, and Escape to close it.
 
+## Adding photos to an experience
+
+Experience stories support the same optional photo fields as projects. Add them
+to the YAML frontmatter of a file in `src/pages/experience/`; the
+[experience template](src/pages/experience/_template.md) has commented examples.
+Put photos in `public/images/experience/` and use their public paths:
+
+```yaml
+image: /images/experience/example.jpg
+imageAlt: "A description of the main photo."
+gallery:
+  - src: /images/experience/another-photo.jpg
+    alt: "A description of another photo."
+    caption: "An optional caption."
+```
+
+Replace the example paths with your own files. The optional `image` appears
+first, followed by the `gallery` list. Each photo needs descriptive alt text;
+captions are optional. You can use `gallery` without an `image`, or omit both
+for a text-only story. Blank `image:` and `gallery:` fields also work.
+
+Photos appear in a right sidebar on desktop and stack below the heading on
+smaller screens. Click a photo to expand it; use Previous/Next or the left/right
+arrow keys to browse, and Escape to close the viewer. No sidebar is rendered
+when there are no photos.
+
 ## Showing an experience without a story
 
 Add this YAML field to an experience file in `src/pages/experience/` when you
@@ -100,30 +126,19 @@ in the home-page map without opening a page when clicked or tapped. Omit the
 field or set `hasStory: true` to enable the timeline and node links. The
 [experience template](src/pages/experience/_template.md) includes this option.
 
-## Writing blog entries
+## Writing project updates
 
-The blog lives at `/blog`. Each entry is a Markdown file in `src/pages/blog/`,
-using the same file-based approach as the experience stories.
+Keep build stories, experiments, and progress notes together in the relevant
+file under `src/pages/projects/`. A project can start as a short note and grow
+as the work develops; photos, dates, and tools are optional.
 
-1. Copy [the entry template](src/pages/blog/_template.md) to a new file in the
-   same folder, for example `my-first-project.md`.
-2. Set `title`, `summary`, and `date` in its YAML frontmatter. Keep the date
-   quoted in `"YYYY-MM-DD"` format, such as `"2026-10-31"`. `tags` is optional.
-3. Keep the `layout` value unchanged so your entry uses the shared blog layout.
-4. Replace the Markdown below the second `---` line with your writing. Use `##`
-   for section headings; the layout supplies the page's main heading.
-5. Save the file. It appears at `/blog/my-first-project`, on the blog index,
-   and in the home-page cloud. The index sorts entries by date, newest first.
+For an ongoing project, add a `## Progress updates` section and use a dated
+`###` heading for each update, newest first. The project template includes an
+example. These are ordinary Markdown sections on the same project page, so
+the URL stays the same as you add updates. Update the summary when useful;
+the frontmatter date is display text and does not automatically track edits.
 
-Keep a filename prefixed with `_` while drafting (for example `_my-first-project.md`).
-Astro excludes those files from page routes, and the blog index and page cloud
-exclude them too. Remove the prefix when you want the entry included in the site.
-The template itself stays excluded. Dates control ordering, not scheduled publishing.
-
-[The starter entry](src/pages/blog/starting-this-blog.md) is ready to edit.
-[BlogLayout](src/layouts/BlogLayout.astro) styles individual entries,
-[blog.astro](src/pages/blog.astro) builds the index, and
-[blog.ts](src/lib/blog.ts) shares their types and date formatting.
+The former `/blog` address redirects to `/projects`.
 
 ## How a page reaches the browser
 

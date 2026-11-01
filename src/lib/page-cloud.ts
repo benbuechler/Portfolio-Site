@@ -185,3 +185,67 @@ export function layoutPageCloud(
     };
   });
 }
+
+interface CloudLabelPosition {
+  x: number;
+  y: number;
+  anchorY: number;
+}
+
+/** Separate overlapping labels while retaining their order between frames. */
+export function layoutCloudLabels(
+  points: { x: number; y: number }[],
+  sizes: { width: number; height: number }[],
+  width: number,
+  height: number,
+  previous: CloudLabelPosition[] = [],
+): CloudLabelPosition[] {
+  const margin = 8;
+  const gap = 5;
+  const clampY = (y: number, index: number) => Math.max(margin, Math.min(height - sizes[index].height - margin, y));
+  const labels = points.map((point, index) => {
+    const size = sizes[index];
+    const anchorY = clampY(point.y - size.height / 2, index);
+    // Retain most of the previous displacement to avoid swapping crowded labels
+    // back and forth. Free labels gradually settle beside their own nodes again.
+    const displacement = previous[index] ? (previous[index].y - previous[index].anchorY) * 0.85 : 0;
+    return {
+      x: Math.max(margin, Math.min(width - size.width - margin, point.x + (index === 0 ? -size.width - 12 : 12))),
+      y: clampY(anchorY + displacement, index),
+      anchorY,
+    };
+  });
+  // Fix the order for this solve, so resolving one pair cannot reverse another.
+  const order = labels.map((_, index) => index).sort((a, b) =>
+    labels[a].y + sizes[a].height / 2 - labels[b].y - sizes[b].height / 2 || a - b);
+  for (let pass = 0; pass < 48; pass++) {
+    let largestOverlap = 0;
+    for (let a = 0; a < order.length; a++) {
+      for (let b = a + 1; b < order.length; b++) {
+        const upper = order[a];
+        const lower = order[b];
+        const first = labels[upper];
+        const second = labels[lower];
+        if (first.x + sizes[upper].width + gap <= second.x || second.x + sizes[lower].width + gap <= first.x) continue;
+        const overlap = first.y + sizes[upper].height + gap - second.y;
+        if (overlap <= 0) continue;
+        largestOverlap = Math.max(largestOverlap, overlap);
+        // Share the correction, giving any leftover to the other label when a
+        // viewport edge prevents one from moving further.
+        const up = Math.min(overlap / 2, first.y - margin);
+        const down = Math.min(overlap - up, Math.max(0, height - margin - sizes[lower].height - second.y));
+        first.y = clampY(first.y - (overlap - down), upper);
+        second.y = clampY(second.y + down, lower);
+      }
+    }
+    if (largestOverlap < 0.1) break;
+  }
+  // A new collision can require a large correction. Spread it across frames
+  // instead of making a label jump when two branches cross in projection.
+  labels.forEach((label, index) => {
+    if (!previous[index]) return;
+    const oldY = previous[index].y;
+    label.y = clampY(oldY + Math.max(-8, Math.min(8, label.y - oldY)), index);
+  });
+  return labels;
+}

@@ -2,6 +2,8 @@
 // Frontmatter runs as Astro renders the page. This layout reuses BaseLayout's
 // document/navigation and adds the structure shared by the Markdown stories.
 import BaseLayout from "./BaseLayout.astro";
+import ProjectGallery from "../components/ProjectGallery.astro";
+import { getGalleryImages } from "../lib/gallery";
 // import type is only for TypeScript checks; it adds no runtime JavaScript.
 import type { ExperienceFrontmatter } from "../lib/experiences";
 
@@ -12,6 +14,7 @@ interface Props {
 
 // Destructuring gives convenient local names to the metadata fields.
 const { title, summary, category, period, organization } = Astro.props.frontmatter;
+const images = getGalleryImages(Astro.props.frontmatter, `Experience "${title}"`);
 // A template string combines Astro's configured base path with this route.
 // With this project's root base, BASE_URL is "/", giving "/experience".
 const experienceHref = `${import.meta.env.BASE_URL}experience`;
@@ -25,26 +28,34 @@ const experienceHref = `${import.meta.env.BASE_URL}experience`;
     <!-- The arrow is decorative; screen readers already get the link's wording. -->
     <a class="back-link text-link" href={experienceHref}><span aria-hidden="true">←</span> Back to experience</a>
 
-    <header class="experience-heading">
-      <!-- Small metadata precedes the main h1. span groups inline text so it
-           can be styled or hidden from assistive technology separately. -->
-      <p class="eyebrow">{category} <span aria-hidden="true">/</span> {period}</p>
-      <h1>{title}<span class="accent">.</span></h1>
-      <!-- && conditionally renders this paragraph when organization is truthy
-           (a nonempty string here); absent/empty metadata produces no paragraph. -->
-      {organization && <p class="organization">{organization}</p>}
-      <p class="experience-overview">{summary}</p>
-    </header>
+    <div class:list={["experience-layout", { "has-gallery": images.length > 0 }]}>
+      <header class="experience-heading">
+        <!-- Small metadata precedes the main h1. span groups inline text so it
+             can be styled or hidden from assistive technology separately. -->
+        <p class="eyebrow">{category} <span aria-hidden="true">/</span> {period}</p>
+        <h1>{title}<span class="accent">.</span></h1>
+        <!-- && conditionally renders this paragraph when organization is truthy
+             (a nonempty string here); absent/empty metadata produces no paragraph. -->
+        {organization && <p class="organization">{organization}</p>}
+        <p class="experience-overview">{summary}</p>
+      </header>
 
-    <div class="experience-story">
-      <!-- Astro inserts the Markdown body, converted into HTML, into this slot. -->
-      <slot />
+      {images.length > 0 && (
+        <aside class="experience-media" aria-label={`${title} photos`}>
+          <ProjectGallery images={images} subject="" />
+        </aside>
+      )}
+
+      <div class="experience-story">
+        <!-- Astro inserts the Markdown body, converted into HTML, into this slot. -->
+        <slot />
+      </div>
+
+      <!-- Repeat the return link so a reader reaching the bottom can navigate back. -->
+      <footer class="experience-footer">
+        <a class="text-link" href={experienceHref}><span aria-hidden="true">←</span> Return to the timeline</a>
+      </footer>
     </div>
-
-    <!-- Repeat the return link so a reader reaching the bottom can navigate back. -->
-    <footer class="experience-footer">
-      <a class="text-link" href={experienceHref}><span aria-hidden="true">←</span> Return to the timeline</a>
-    </footer>
   </article>
 </BaseLayout>
 
@@ -54,8 +65,28 @@ const experienceHref = `${import.meta.env.BASE_URL}experience`;
      length makes long prose easier to read. rem uses the root font size.
      margin-block sets the logical top/bottom space in this writing direction. */
   .experience-article {
-    max-width: 75ch;
+    max-width: 75rem;
+    min-width: 0;
     margin-block: 2rem 5rem;
+    overflow-wrap: anywhere;
+  }
+
+  .experience-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .experience-media {
+    min-width: 0;
+  }
+
+  .experience-heading,
+  .experience-story,
+  .experience-footer {
+    max-width: 75ch;
+    min-width: 0;
+    grid-column: 1;
   }
 
   /* The return link is smaller and quieter than the main heading. */
@@ -138,5 +169,41 @@ const experienceHref = `${import.meta.env.BASE_URL}experience`;
   .experience-footer {
     padding-top: 1.5rem;
     border-top: 1px solid var(--color-border);
+  }
+
+  @media (min-width: 961px) {
+    /* Match project stories: photos sit to the right and text can use the space
+       below the gallery. flow-root contains the floated heading and gallery. */
+    .experience-layout.has-gallery {
+      --gallery-gap: clamp(2rem, 5vw, 4rem);
+      display: flow-root;
+    }
+
+    .has-gallery .experience-heading {
+      float: left;
+      width: calc((100% - var(--gallery-gap)) * 7 / 12);
+    }
+
+    .experience-media {
+      float: right;
+      width: calc((100% - var(--gallery-gap)) * 5 / 12);
+      margin: 0 0 1.5rem var(--gallery-gap);
+    }
+
+    .has-gallery .experience-story {
+      clear: left;
+      max-width: none;
+    }
+
+    .has-gallery .experience-footer {
+      clear: both;
+      max-width: none;
+    }
+  }
+
+  @media (max-width: 960px) {
+    .experience-media {
+      margin-block: 1.5rem 0;
+    }
   }
 </style>

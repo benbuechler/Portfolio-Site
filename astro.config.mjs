@@ -14,5 +14,6 @@ import mdx from '@astrojs/mdx';
 // export default gives Astro the configuration object when it loads this file.
 // The [] is an array; react() and mdx() call functions to create integrations.
 export default defineConfig({
+  redirects: { '/blog': '/projects' },
   integrations: [react(), mdx()]
 });

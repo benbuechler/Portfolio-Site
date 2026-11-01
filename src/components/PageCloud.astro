@@ -92,7 +92,7 @@ const { nodes } = createPageCloud(pages);
 <!-- This script runs in the browser. Astro converts its TypeScript to JavaScript
      and bundles the imports, unlike the build-time frontmatter above. -->
 <script>
-  import { createPageCloud, layoutPageCloud, DEFAULT_CLOUD_ROTATION } from "../lib/page-cloud";
+  import { createPageCloud, layoutPageCloud, layoutCloudLabels, DEFAULT_CLOUD_ROTATION } from "../lib/page-cloud";
   import type { SitePage } from "../lib/site-pages";
 
   // `extends` inherits standard HTML element behavior. The custom element keeps
@@ -142,6 +142,7 @@ const { nodes } = createPageCloud(pages);
       // its function type here, so we do not repeat the projected-point definition.
       let positions: ReturnType<typeof layoutPageCloud> = [];
       let sizes = labels.map(() => ({ width: 0, height: 0 }));
+      let labelPositions: ReturnType<typeof layoutCloudLabels> = [];
       // Array indexes start at 0; -1 represents "no hovered/focused node".
       let hovered = -1;
       let focused = -1;
@@ -224,16 +225,23 @@ const { nodes } = createPageCloud(pages);
           ctx.stroke();
         }
 
-        // Move every label beside its dot, including nodes without story links.
+        const previousLabels = labelPositions;
+        labelPositions = layoutCloudLabels(positions, sizes, width, height, previousLabels);
+        // Finish spacing adjustments even when automatic rotation is paused.
+        if (previousLabels.length && labelPositions.some((label, index) => Math.abs(label.y - previousLabels[index].y) > 0.1)) requestDraw();
+        // Move crowded labels apart and connect displaced labels to their dots.
         positions.forEach((point, index) => {
           const selected = index === active;
           const size = sizes[index];
-          // Keep a fixed offset from each node instead of repacking labels as
-          // the map turns. Clamping at the edges is continuous, so nothing jumps.
-          const offset = index === 0 ? -size.width - 12 : 12;
-          // Math.min/Math.max clamp each label to the viewport with an 8px margin.
-          const x = Math.max(8, Math.min(width - size.width - 8, point.x + offset));
-          const y = Math.max(8, Math.min(height - size.height - 8, point.y - size.height / 2));
+          const { x, y, anchorY } = labelPositions[index];
+          if (Math.abs(y - anchorY) > 6) {
+            ctx.globalAlpha = selected ? 0.5 : 0.18;
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.moveTo(point.x, point.y);
+            ctx.lineTo(Math.max(x, Math.min(x + size.width, point.x)), y + size.height / 2);
+            ctx.stroke();
+          }
           // Backticks create a template string; ${...} inserts values into it.
           // translate moves the label visually without rearranging sibling links.
           labels[index].style.transform = `translate(${x}px, ${y}px)`;
@@ -405,6 +413,10 @@ const { nodes } = createPageCloud(pages);
       // Share this arrow-function handler across normal and canceled drag endings.
       // PointerEvent tells TypeScript which event properties should be available.
       const endDrag = (event: PointerEvent) => {
+        // Touch browsers implicitly capture on the pressed label. Transferring
+        // capture to the viewport sends lostpointercapture from that label;
+        // its bubbling event must not end the viewport's newly captured drag.
+        if (event.type === "lostpointercapture" && event.target !== viewport) return;
         if (drag?.id !== event.pointerId) return;
         if (event.type === "pointerup" && drag.moved) {
           // A drag starting on a link must never become an accidental page visit.

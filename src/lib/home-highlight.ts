@@ -18,6 +18,6 @@ export const homeHighlight: HomeHighlight = {
   summary:
     "The story behind this site: building an explorable network of experiences, experimenting with Astro, and learning along the way.",
   // href is the page's URL, rather than its src/pages/ filename.
-  href: "/experience/building-this-portfolio",
+  href: "/projects/personal-portfolio",
   category: "Personal project",
 };

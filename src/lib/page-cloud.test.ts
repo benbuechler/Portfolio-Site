@@ -5,7 +5,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 // Named imports select the exported functions being tested. These tests run in
 // Node, so the geometry module must work without document or other browser APIs.
-import { createPageCloud, layoutPageCloud } from "./page-cloud.ts";
+import { createPageCloud, layoutPageCloud, layoutCloudLabels } from "./page-cloud.ts";
 
 // This fixture (sample input reused by tests) covers Home, top-level pages, and
 // nested experience pages. Array positions become the graph's node indexes.
@@ -92,4 +92,40 @@ test("empty, single-page, and zero-sized maps have finite output", () => {
   assert.deepEqual(layoutPageCloud(single.nodes, single.extent, 0, 0), [
     { x: 0, y: 0, z: 0, perspective: 1 },
   ]);
+});
+
+test("crowded labels separate inside the viewport, including at its edges", () => {
+  for (const centerY of [10, 200, 390]) {
+    const points = Array.from({ length: 8 }, () => ({ x: 100, y: centerY }));
+    const sizes = points.map(() => ({ width: 120, height: 28 }));
+    const labels = layoutCloudLabels(points, sizes, 288, 400);
+    labels.forEach((label, index) => {
+      assert(label.x >= 8 && label.x + sizes[index].width <= 280);
+      assert(label.y >= 8 && label.y + sizes[index].height <= 392);
+      labels.slice(index + 1).forEach((other, offset) => {
+        const otherSize = sizes[index + 1 + offset];
+        assert(label.x + sizes[index].width <= other.x || other.x + otherSize.width <= label.x
+          || label.y + sizes[index].height <= other.y || other.y + otherSize.height <= label.y,
+        "labels must not cover one another");
+      });
+    });
+  }
+});
+
+test("label spacing follows rotation without changing node geometry", () => {
+  const cloud = createPageCloud(pages);
+  const sizes = pages.map(() => ({ width: 130, height: 28 }));
+  let previous: ReturnType<typeof layoutCloudLabels> = [];
+  for (let step = 0; step < 360; step++) {
+    const points = layoutPageCloud(cloud.nodes, cloud.extent, 375, 400, { yaw: step * Math.PI / 180, pitch: 0.12 });
+    const original = structuredClone(points);
+    const labels = layoutCloudLabels(points, sizes, 375, 400, previous);
+    assert.deepEqual(points, original);
+    labels.forEach((label, index) => {
+      assert(Number.isFinite(label.x) && Number.isFinite(label.y));
+      if (previous.length) assert(Math.abs(label.y - previous[index].y) < 15, "small rotations keep label movement smooth");
+    });
+    previous = labels;
+  }
+  assert.deepEqual(layoutCloudLabels([], [], 0, 0), []);
 });
