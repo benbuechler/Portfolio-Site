@@ -4,6 +4,7 @@ title: "Personal portfolio site"
 summary: "A growing home for my projects and experience, with an interactive 3D map connecting every page."
 image: "/images/projects/portfolio.svg"
 imageAlt: "Illustration of the portfolio’s connected page nodes in a blue 3D network."
+date: October 2026
 tools:
   - Astro
   - TypeScript

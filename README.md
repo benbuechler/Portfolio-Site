@@ -34,22 +34,45 @@ page URL, such as `/experience/building-this-portfolio`). The
 content below the home-page introduction. You choose this feature manually;
 changing another file does not automatically replace it.
 
+## Home-page map motion
+
+The node map gently drifts while idle, easing toward a new random direction
+every few seconds. Both sideways rotation and tilt change over time.
+Clicking, keyboard focus, and dragging pause the drift; it resumes after a short
+idle delay, even while the mouse remains over the map. Hovering alone keeps it
+moving. Off-screen maps and hidden browser tabs stop animating.
+Use the pause/play icon beside the arrow controls to stop or resume it. Automatic
+motion starts disabled when the system requests reduced motion, with the option
+to resume explicitly. The `driftSpeed` value in
+[PageCloud](src/components/PageCloud.astro) controls its speed.
+
 ## Adding projects
 
-The `/projects` hub displays a picture, title, and summary for each project.
+The `/projects` hub displays a title, summary, and optional picture for each project.
 Each card opens that project's own page, using the same Markdown approach as
 the blog and experience stories.
 
 1. Copy [the project template](src/pages/projects/_template.md) to a new `.md`
    file in the same folder, for example `my-project.md`.
-2. Set `title`, `summary`, `image`, and `imageAlt` in the YAML frontmatter.
-   Put the picture in `public/images/projects/` and use its public URL, such as
-   `/images/projects/my-project.jpg`. `imageAlt` describes the picture.
-3. Optionally add `tools` labels and a numeric `sortOrder`. Smaller numbers
-   appear first; omitted values default to `0`, with titles breaking ties.
-4. Keep the `layout` value and replace the Markdown body with your write-up.
-   Use `##` for sections; the layout supplies the title and cover picture.
-5. Save. `/projects/my-project`, its hub card, and its home-page map node are
+2. Set the required `title` and `summary` in the YAML frontmatter.
+   To add a cover, put the picture in `public/images/projects/` and set `image`
+   to its public URL, such as `/images/projects/my-project.jpg`. A non-empty
+   `image` requires an `imageAlt` description. Remove or comment out `image`,
+   leave `image:` blank, or use `image: ""` for no cover, with no placeholder.
+3. Optionally add a `gallery` list for extra photos. Each item needs `src` (a
+   public image URL) and `alt`, with an optional `caption`; the template includes
+   commented examples. The cover appears first, followed by the gallery items.
+   Gallery-only projects show photos on the detail page and a text-only hub card.
+   With neither a cover nor gallery, the project page is text-only.
+4. Optionally add a single quoted `date`, such as `date: "October 2026"`.
+   It appears as written on both the card and the project page; ranges such as
+   `"2025–2026"` or `"Ongoing"` also work. Omit `date` to hide it.
+   You can also add `tools` labels and a numeric `sortOrder`. Smaller numbers
+   appear first; `sortOrder` defaults to `0`, with titles breaking ties.
+   The display date does not affect this order.
+5. Keep the `layout` value and replace the Markdown body with your write-up.
+   Use `##` for sections; the layout supplies the title and optional photo gallery.
+6. Save. `/projects/my-project`, its hub card, and its home-page map node are
    discovered automatically. Keep filenames prefixed with `_` while drafting
    to exclude them from all three places.
 
@@ -57,7 +80,10 @@ the blog and experience stories.
 entry. [ProjectLayout](src/layouts/ProjectLayout.astro) styles the detail pages;
 [projects.astro](src/pages/projects.astro) discovers and displays their cards.
 The hub uses three columns on large screens, two on medium screens, and one
-on phones. Covers are cropped to a consistent 8:5 ratio.
+on phones. Hub covers are cropped to a consistent 8:5 ratio. The project page
+shows the full photo in a right sidebar on desktop, stacked with the write-up
+on mobile. Click a thumbnail to expand the gallery; use Previous/Next or the
+left/right arrow keys to browse, and Escape to close it.
 
 ## Showing an experience without a story
 
@@ -69,8 +95,9 @@ hasStory: false
 ```
 
 The entry stays on the timeline, with its title, period, and summary, but its
-card is not clickable and “Read the story” is hidden. Omit the field or set
-`hasStory: true` to keep the story link. The
+card is not clickable and “Read the story” is hidden. Its node also stays visible
+in the home-page map without opening a page when clicked or tapped. Omit the
+field or set `hasStory: true` to enable the timeline and node links. The
 [experience template](src/pages/experience/_template.md) includes this option.
 
 ## Writing blog entries

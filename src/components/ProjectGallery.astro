@@ -1,0 +1,378 @@
+---
+import type { ProjectImage } from "../lib/projects";
+
+interface Props {
+  images: ProjectImage[];
+}
+
+const { images } = Astro.props;
+// Metadata uses public-root paths. Add the configured base for subfolder hosting.
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src}` }));
+---
+
+{pictures.length > 0 && (
+  <project-gallery role="region" aria-label="Project photographs">
+    <h2 class="gallery-heading">Project photos</h2>
+    <div class="gallery-grid">
+      {pictures.map((image, index) => (
+        <figure class:list={["gallery-photo", { "gallery-feature": index === 0 }]}>
+          {/* Real links remain useful without JavaScript or dialog support. */}
+          <a
+            class="gallery-image-link"
+            href={image.src}
+            data-gallery-image
+            data-caption={image.caption}
+            aria-label={`View photo ${index + 1} of ${pictures.length}: ${image.alt}`}
+          >
+            <img src={image.src} alt={image.alt} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
+            <span class="gallery-expand" aria-hidden="true">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />
+              </svg>
+            </span>
+          </a>
+          {image.caption && <figcaption>{image.caption}</figcaption>}
+        </figure>
+      ))}
+    </div>
+
+    {/* showModal puts this above the pinned navigation and makes the rest of
+        the document inert. Escape and Tab follow the browser's dialog behavior. */}
+    <dialog class="gallery-dialog" aria-label="Project photo viewer">
+      <div class="lightbox-panel">
+        <div class="lightbox-toolbar">
+          <p class="lightbox-counter" data-counter role="status" aria-live="polite" aria-atomic="true">Photo 1 of {pictures.length}</p>
+          <button type="button" class="lightbox-button close-button" data-close aria-label="Close photo viewer" autofocus>
+            <span aria-hidden="true">×</span>
+          </button>
+        </div>
+        <figure class="lightbox-photo">
+          <img data-large-image src={pictures[0].src} alt={pictures[0].alt} />
+          <figcaption data-large-caption hidden={!pictures[0].caption}>{pictures[0].caption}</figcaption>
+        </figure>
+        {pictures.length > 1 && (
+          <div class="lightbox-navigation" role="group" aria-label="Browse project photos">
+            <button type="button" class="lightbox-button" data-previous><span aria-hidden="true">←</span> Previous</button>
+            <button type="button" class="lightbox-button" data-next>Next <span aria-hidden="true">→</span></button>
+          </div>
+        )}
+      </div>
+    </dialog>
+  </project-gallery>
+)}
+
+<script>
+  class ProjectGallery extends HTMLElement {
+    private cleanup?: () => void;
+
+    connectedCallback() {
+      if (this.cleanup) return;
+      const dialog = this.querySelector<HTMLDialogElement>("dialog");
+      const panel = this.querySelector<HTMLElement>(".lightbox-panel");
+      const largeImage = this.querySelector<HTMLImageElement>("[data-large-image]");
+      const caption = this.querySelector<HTMLElement>("[data-large-caption]");
+      const counter = this.querySelector<HTMLElement>("[data-counter]");
+      if (!dialog || typeof dialog.showModal !== "function" || !panel || !largeImage || !caption || !counter) return;
+
+      const links = [...this.querySelectorAll<HTMLAnchorElement>("[data-gallery-image]")];
+      const pictures = links.map((link) => ({
+        src: link.href,
+        alt: link.querySelector("img")?.alt ?? "",
+        caption: link.dataset.caption ?? "",
+      }));
+      const controller = new AbortController();
+      const options = { signal: controller.signal };
+      let current = 0;
+      let opener: HTMLAnchorElement | undefined;
+      let previousOverflow: { body: string; root: string } | undefined;
+      let backdropPress = false;
+
+      const showImage = (index: number) => {
+        current = (index + pictures.length) % pictures.length;
+        const picture = pictures[current];
+        largeImage.src = picture.src;
+        largeImage.alt = picture.alt;
+        caption.textContent = picture.caption;
+        caption.hidden = !picture.caption;
+        counter.textContent = `Photo ${current + 1} of ${pictures.length}`;
+      };
+
+      // Remember inline values so closing or removing the gallery restores the
+      // page's original scroll behavior, including after native Escape dismissal.
+      const unlockScroll = () => {
+        if (!previousOverflow) return;
+        document.body.style.overflow = previousOverflow.body;
+        document.documentElement.style.overflow = previousOverflow.root;
+        previousOverflow = undefined;
+      };
+
+      links.forEach((link, index) => {
+        link.addEventListener("click", (event) => {
+          // Preserve open-in-new-tab/window gestures and download-style actions.
+          if (event.button !== 0 || event.ctrlKey || event.metaKey || event.shiftKey || event.altKey) return;
+          if (dialog.open) {
+            event.preventDefault();
+            return;
+          }
+          showImage(index);
+          try {
+            dialog.showModal();
+          } catch {
+            return; // The original image link still works if a modal cannot open.
+          }
+          event.preventDefault();
+          opener = link;
+          previousOverflow = {
+            body: document.body.style.overflow,
+            root: document.documentElement.style.overflow,
+          };
+          document.body.style.overflow = "hidden";
+          document.documentElement.style.overflow = "hidden";
+        }, options);
+      });
+
+      this.querySelector("[data-close]")?.addEventListener("click", () => dialog.close(), options);
+      this.querySelector("[data-previous]")?.addEventListener("click", () => showImage(current - 1), options);
+      this.querySelector("[data-next]")?.addEventListener("click", () => showImage(current + 1), options);
+      dialog.addEventListener("keydown", (event) => {
+        if (pictures.length < 2 || event.altKey || event.ctrlKey || event.metaKey) return;
+        if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+          event.preventDefault();
+          showImage(current + (event.key === "ArrowLeft" ? -1 : 1));
+        }
+      }, options);
+      dialog.addEventListener("close", () => {
+        unlockScroll();
+        if (this.isConnected && opener?.isConnected) opener.focus({ preventScroll: true });
+        opener = undefined;
+      }, options);
+
+      // Require both ends of the click outside the panel. Releasing an image
+      // drag over the backdrop must not unexpectedly dismiss the viewer.
+      const outsidePanel = (event: MouseEvent) => {
+        const bounds = panel.getBoundingClientRect();
+        return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+      };
+      dialog.addEventListener("pointerdown", (event) => {
+        backdropPress = event.target === dialog && outsidePanel(event);
+      }, options);
+      dialog.addEventListener("click", (event) => {
+        if (backdropPress && event.target === dialog && outsidePanel(event)) dialog.close();
+        backdropPress = false;
+      }, options);
+
+      this.cleanup = () => {
+        controller.abort();
+        if (dialog.open) dialog.close();
+        unlockScroll();
+      };
+    }
+
+    disconnectedCallback() {
+      this.cleanup?.();
+      this.cleanup = undefined;
+    }
+  }
+
+  if (!customElements.get("project-gallery")) customElements.define("project-gallery", ProjectGallery);
+</script>
+
+<style>
+  project-gallery {
+    display: block;
+    min-width: 0;
+  }
+
+  .gallery-heading {
+    margin: 0 0 1rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    align-items: start;
+    gap: 1rem;
+  }
+
+  .gallery-photo {
+    min-width: 0;
+    margin: 0;
+  }
+
+  .gallery-feature {
+    grid-column: 1 / -1;
+  }
+
+  .gallery-image-link {
+    position: relative;
+    display: block;
+    overflow: hidden;
+    aspect-ratio: 4 / 3;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+    transition: border-color 150ms ease;
+  }
+
+  .gallery-feature .gallery-image-link {
+    aspect-ratio: auto;
+  }
+
+  /* Contain preserves every edge of portrait photos and engineering details. */
+  .gallery-image-link img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+  }
+
+  .gallery-feature img {
+    height: auto;
+    max-height: 65svh;
+  }
+
+  .gallery-image-link:hover,
+  .gallery-image-link:focus-visible {
+    border-color: var(--color-accent);
+  }
+
+  .gallery-expand {
+    position: absolute;
+    right: 0.6rem;
+    bottom: 0.6rem;
+    display: grid;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 1px solid var(--color-border);
+    border-radius: 6px;
+    background: var(--color-bg);
+    color: var(--color-text);
+  }
+
+  figcaption {
+    margin-top: 0.6rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+
+  .gallery-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: clamp(0.5rem, 2vw, 1.5rem);
+    overflow: hidden;
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  .gallery-dialog[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  .gallery-dialog::backdrop {
+    background: rgb(0 0 0 / 80%);
+  }
+
+  .lightbox-panel {
+    width: min(100%, 80rem);
+    max-height: 100%;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-bg);
+  }
+
+  .lightbox-toolbar,
+  .lightbox-navigation {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .lightbox-toolbar {
+    margin-bottom: 0.75rem;
+  }
+
+  .lightbox-counter {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+  }
+
+  .lightbox-photo {
+    margin: 0;
+  }
+
+  .lightbox-photo img {
+    display: block;
+    width: 100%;
+    height: min(68dvh, 52rem);
+    object-fit: contain;
+  }
+
+  .lightbox-photo figcaption {
+    max-width: 80ch;
+    margin-inline: auto;
+    text-align: center;
+  }
+
+  .lightbox-navigation {
+    margin-top: 1rem;
+  }
+
+  .lightbox-button {
+    display: inline-flex;
+    min-width: 44px;
+    min-height: 44px;
+    align-items: center;
+    justify-content: center;
+    gap: 0.75rem;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 0.875rem;
+    cursor: pointer;
+  }
+
+  .lightbox-button:hover {
+    border-color: var(--color-accent);
+  }
+
+  .lightbox-button:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .close-button {
+    padding: 0;
+    font-size: 1.75rem;
+    line-height: 1;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .gallery-image-link {
+      transition: none;
+    }
+  }
+</style>

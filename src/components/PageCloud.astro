@@ -45,14 +45,23 @@ const { nodes } = createPageCloud(pages);
          ordinary HTML so they retain names, destinations, and keyboard access. -->
     <canvas aria-hidden="true"></canvas>
     <nav class="cloud-links" aria-label="Site map pages">
-      <!-- Braces evaluate JavaScript in the template. map creates one anchor per
-           node; index associates it with the drawing data. href is its destination.
-           draggable="false" disables native link dragging for our rotation gesture. -->
-      {nodes.map((node, index) => (
-        <a class="cloud-link" href={node.href} data-node={index} aria-label={pages[index].label} draggable="false">
-          {node.label}
-        </a>
-      ))}
+      <!-- Keep one label per node so drawing indexes stay aligned. Entries
+           without stories use plain text, with no destination or Tab stop. -->
+      {nodes.map((node, index) => {
+        const hasStory = pages[index].hasStory !== false;
+        const Label = hasStory ? "a" : "span";
+        return (
+          <Label
+            class:list={["cloud-label", { "cloud-link": hasStory }]}
+            href={hasStory ? node.href : undefined}
+            data-node={index}
+            aria-label={hasStory ? pages[index].label : undefined}
+            draggable="false"
+          >
+            {node.label}
+          </Label>
+        );
+      })}
     </nav>
   </div>
   <!-- CSS switches between desktop/touch hints. sr-only supplies extra details
@@ -68,6 +77,14 @@ const { nodes } = createPageCloud(pages);
       <button type="button" data-rotate="up" aria-label="Tilt map up">↑</button>
       <button type="button" data-rotate="down" aria-label="Tilt map down">↓</button>
       <button type="button" data-rotate="right" aria-label="Rotate map right">→</button>
+      <button class="cloud-motion" type="button" aria-label="Pause automatic rotation" title="Pause automatic rotation">
+        <svg class="motion-pause" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false">
+          <path d="M8 5v14M16 5v14" />
+        </svg>
+        <svg class="motion-play" width="18" height="18" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
+          <path d="m8 5 11 7-11 7Z" />
+        </svg>
+      </button>
     </div>
   </div>
 </page-cloud>
@@ -76,6 +93,7 @@ const { nodes } = createPageCloud(pages);
      and bundles the imports, unlike the build-time frontmatter above. -->
 <script>
   import { createPageCloud, layoutPageCloud, DEFAULT_CLOUD_ROTATION } from "../lib/page-cloud";
+  import type { SitePage } from "../lib/site-pages";
 
   // `extends` inherits standard HTML element behavior. The custom element keeps
   // this map's setup and teardown alongside the <page-cloud> that owns them.
@@ -102,13 +120,13 @@ const { nodes } = createPageCloud(pages);
       // The annotation describes an array of href/label objects. JSON.parse turns
       // saved text back into data. `??` supplies "[]" only for null/undefined;
       // TypeScript's annotation does not validate the JSON at runtime.
-      const pages: { href: string; label: string }[] = JSON.parse(this.dataset.pages ?? "[]");
+      const pages: SitePage[] = JSON.parse(this.dataset.pages ?? "[]");
       // nodes are 3D points; connections contain pairs of their indexes; extent
       // describes the original scale. The helper keeps geometry separate from UI.
       const { nodes, connections, extent } = createPageCloud(pages);
       // querySelectorAll returns a NodeList. `...` spreads its entries into an
       // ordinary array so we can use array methods such as map below.
-      const links = [...this.querySelectorAll<HTMLAnchorElement>(".cloud-link")];
+      const labels = [...this.querySelectorAll<HTMLElement>(".cloud-label")];
       // Every listener using this signal can be removed together with abort().
       const controller = new AbortController();
       const options = { signal: controller.signal };
@@ -123,16 +141,34 @@ const { nodes } = createPageCloud(pages);
       // ReturnType derives the result type of layoutPageCloud; typeof refers to
       // its function type here, so we do not repeat the projected-point definition.
       let positions: ReturnType<typeof layoutPageCloud> = [];
-      let sizes = links.map(() => ({ width: 0, height: 0 }));
+      let sizes = labels.map(() => ({ width: 0, height: 0 }));
       // Array indexes start at 0; -1 represents "no hovered/focused node".
       let hovered = -1;
       let focused = -1;
       // frame stores a queued animation request; 0 means no request is pending.
       let frame = 0;
+      let disposed = false;
       let suppressClick = false;
       // `| undefined` allows either a drag record or no drag. yaw rotates sideways
       // and pitch tilts vertically, both in radians rather than degrees.
       let drag: { id: number; x: number; y: number; yaw: number; pitch: number; moved: boolean } | undefined;
+
+      const cloud = this;
+      const motionButton = this.querySelector<HTMLButtonElement>(".cloud-motion");
+      const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+      // An explicit button choice overrides the default motion preference.
+      let motionChoice: boolean | undefined;
+      const wantsMotion = () => motionChoice ?? !reducedMotion.matches;
+      let inView = typeof IntersectionObserver === "undefined";
+      let previousDriftTime: number | undefined;
+      let resumeAfter = 0;
+      let resumeTimer: ReturnType<typeof setTimeout> | undefined;
+      const driftSpeed = 0.035; // Maximum radians per second for the gentle drift.
+      let directionRemaining = 0;
+      let yawVelocity = 0;
+      let pitchVelocity = 0;
+      let targetYawVelocity = 0;
+      let targetPitchVelocity = 0;
 
       // Three faint great circles make the volume visible as the map turns.
       // map creates one ring per axis. Array.from makes 65 sample points; `_`
@@ -188,8 +224,7 @@ const { nodes } = createPageCloud(pages);
           ctx.stroke();
         }
 
-        // forEach runs once per point. Move the matching HTML link beside its dot
-        // so the canvas geometry and the actual clickable navigation stay aligned.
+        // Move every label beside its dot, including nodes without story links.
         positions.forEach((point, index) => {
           const selected = index === active;
           const size = sizes[index];
@@ -201,11 +236,11 @@ const { nodes } = createPageCloud(pages);
           const y = Math.max(8, Math.min(height - size.height - 8, point.y - size.height / 2));
           // Backticks create a template string; ${...} inserts values into it.
           // translate moves the label visually without rearranging sibling links.
-          links[index].style.transform = `translate(${x}px, ${y}px)`;
+          labels[index].style.transform = `translate(${x}px, ${y}px)`;
           // Raise the active label above others; data-active lets CSS use the
           // same highlight for a hovered dot, hovered label, or focused link.
-          links[index].style.zIndex = selected ? "2" : "1";
-          links[index].toggleAttribute("data-active", selected);
+          labels[index].style.zIndex = selected ? "2" : "1";
+          labels[index].toggleAttribute("data-active", selected);
         });
 
         // Draw the nearest nodes last; perspective also changes their size.
@@ -235,32 +270,83 @@ const { nodes } = createPageCloud(pages);
         ctx.globalAlpha = 1;
       }
 
-      // Pointer events may arrive faster than the screen refreshes. Queue at most
-      // one repaint per animation frame, clearing its handle before it runs.
+      // Manual updates and idle rotation share one frame. Use elapsed time so
+      // drift has the same speed on displays with different refresh rates.
       function requestDraw() {
-        if (frame) return;
-        frame = requestAnimationFrame(() => { frame = 0; draw(); });
+        if (frame || disposed) return;
+        frame = requestAnimationFrame((now) => {
+          frame = 0;
+          const active = document.activeElement;
+          const keyboardFocus = active instanceof Element && cloud.contains(active) && active.matches(":focus-visible");
+          const drifting = wantsMotion() && inView && !document.hidden && !keyboardFocus && !drag
+            && width > 0 && height > 0 && nodes.length > 1 && now >= resumeAfter;
+          if (drifting) {
+            if (previousDriftTime !== undefined) {
+              // Cap long frames so resuming after a delay never jumps the view.
+              const seconds = Math.min(now - previousDriftTime, 64) / 1000;
+              directionRemaining -= seconds;
+              if (directionRemaining <= 0) {
+                const direction = Math.random() * Math.PI * 2;
+                const speed = driftSpeed * (0.55 + Math.random() * 0.45);
+                targetYawVelocity = Math.cos(direction) * speed;
+                targetPitchVelocity = Math.sin(direction) * speed * 0.35;
+                directionRemaining = 4 + Math.random() * 5;
+              }
+              // Ease toward each random direction instead of switching abruptly.
+              // Near the tilt limits, gently steer back toward the middle.
+              if (rotation.pitch > 1.1) targetPitchVelocity = -Math.abs(targetPitchVelocity);
+              if (rotation.pitch < -1.1) targetPitchVelocity = Math.abs(targetPitchVelocity);
+              const blend = 1 - Math.exp(-seconds * 0.7);
+              yawVelocity += (targetYawVelocity - yawVelocity) * blend;
+              pitchVelocity += (targetPitchVelocity - pitchVelocity) * blend;
+              rotation.yaw = (rotation.yaw + seconds * yawVelocity) % (Math.PI * 2);
+              rotation.pitch = Math.max(-1.45, Math.min(1.45, rotation.pitch + seconds * pitchVelocity));
+            }
+            previousDriftTime = now;
+          } else {
+            previousDriftTime = undefined;
+          }
+          draw();
+          if (drifting) requestDraw();
+        });
+      }
+
+      // Wait briefly after interaction. A timer wakes the renderer once the
+      // delay ends, rather than repainting continuously while it is paused.
+      function holdDrift() {
+        previousDriftTime = undefined;
+        resumeAfter = performance.now() + 1800;
+        clearTimeout(resumeTimer);
+        // Keep a wake-up even if motion is currently disabled: the preference
+        // may change before this cooldown ends.
+        resumeTimer = setTimeout(() => { resumeTimer = undefined; requestDraw(); }, 1800);
+        requestDraw();
       }
 
       // `%` is the remainder operator: wrap yaw around a full turn. Clamp pitch
       // just short of straight up/down so the view cannot flip over vertically.
       function setRotation(yaw: number, pitch: number) {
         rotation = { yaw: yaw % (Math.PI * 2), pitch: Math.max(-1.45, Math.min(1.45, pitch)) };
-        requestDraw();
+        yawVelocity = 0;
+        pitchVelocity = 0;
+        directionRemaining = 0;
+        holdDrift();
       }
 
       // Copy the starting rotation and redraw without reloading the page.
       function reset() {
-        rotation = { ...DEFAULT_CLOUD_ROTATION };
-        requestDraw();
+        setRotation(DEFAULT_CLOUD_ROTATION.yaw, DEFAULT_CLOUD_ROTATION.pitch);
       }
 
-      // Event targets are not always elements. instanceof checks first; closest
-      // also accepts children inside a link. dataset values are text, so Number
-      // converts the stored index into a numeric array index.
+      // Identify both linked and static labels. Static labels must also stop
+      // clicks from falling through to a nearby dot's navigation handler.
       function nodeFromTarget(target: EventTarget | null) {
-        const link = target instanceof Element ? target.closest<HTMLAnchorElement>(".cloud-link") : null;
-        return link ? Number(link.dataset.node) : -1;
+        const label = target instanceof Element ? target.closest<HTMLElement>(".cloud-label") : null;
+        return label ? Number(label.dataset.node) : -1;
+      }
+
+      function canNavigate(index: number) {
+        return index >= 0 && pages[index]?.hasStory !== false;
       }
 
       // Canvas dots are pixels, not separate DOM elements. Hit testing chooses
@@ -309,7 +395,8 @@ const { nodes } = createPageCloud(pages);
         } else if (!drag) {
           // When idle, either a real link or a nearby drawn dot can be highlighted.
           const targetNode = nodeFromTarget(event.target);
-          const next = targetNode >= 0 ? targetNode : hitNode(event.clientX, event.clientY);
+          const candidate = targetNode >= 0 ? targetNode : hitNode(event.clientX, event.clientY);
+          const next = canNavigate(candidate) ? candidate : -1;
           if (hovered !== next) { hovered = next; requestDraw(); }
           viewport.dataset.overNode = String(next >= 0);
         }
@@ -327,6 +414,7 @@ const { nodes } = createPageCloud(pages);
         // delete removes the data attribute; release capture if it was acquired.
         delete viewport.dataset.dragging;
         if (viewport.hasPointerCapture(event.pointerId)) viewport.releasePointerCapture(event.pointerId);
+        holdDrift();
       };
       viewport.addEventListener("pointerup", endDrag, options);
       viewport.addEventListener("pointercancel", endDrag, options);
@@ -348,8 +436,8 @@ const { nodes } = createPageCloud(pages);
         // that visitors use to open a destination in another tab.
         if (nodeFromTarget(event.target) >= 0) return;
         const hit = hitNode(event.clientX, event.clientY);
-        if (hit >= 0) {
-          links[hit].dispatchEvent(new MouseEvent("click", {
+        if (canNavigate(hit)) {
+          labels[hit].dispatchEvent(new MouseEvent("click", {
             bubbles: true, cancelable: true, view: window,
             ctrlKey: event.ctrlKey, metaKey: event.metaKey, shiftKey: event.shiftKey, altKey: event.altKey,
           }));
@@ -365,6 +453,36 @@ const { nodes } = createPageCloud(pages);
       }, options);
       viewport.addEventListener("focusin", (event) => { focused = nodeFromTarget(event.target); requestDraw(); }, options);
       viewport.addEventListener("focusout", () => { focused = -1; requestDraw(); }, options);
+
+      // Pause for actual presses and keyboard interaction. Hovering can still
+      // highlight nodes while the map drifts; mouse/touch focus resumes later.
+      this.addEventListener("pointerdown", holdDrift, options);
+      this.addEventListener("focusin", holdDrift, options);
+      this.addEventListener("focusout", holdDrift, options);
+
+      const updateMotionButton = () => {
+        if (!motionButton) return;
+        const action = wantsMotion() ? "Pause automatic rotation" : "Resume automatic rotation";
+        motionButton.dataset.paused = String(!wantsMotion());
+        motionButton.setAttribute("aria-label", action);
+        motionButton.title = action;
+      };
+      motionButton?.addEventListener("click", () => {
+        motionChoice = !wantsMotion();
+        updateMotionButton();
+        holdDrift();
+      }, options);
+      reducedMotion.addEventListener("change", () => {
+        // A newly enabled reduced-motion setting stops an existing drift.
+        if (reducedMotion.matches && motionChoice === true) motionChoice = undefined;
+        previousDriftTime = undefined;
+        updateMotionButton();
+        requestDraw();
+      }, options);
+      document.addEventListener("visibilitychange", () => {
+        previousDriftTime = undefined;
+        requestDraw();
+      }, options);
       // Rotate only while the viewport itself has focus, preserving normal keys
       // for focused links. Holding Shift chooses a larger rotation step.
       viewport.addEventListener("keydown", (event) => {
@@ -407,8 +525,8 @@ const { nodes } = createPageCloud(pages);
         // Canvas width/height assignments reset its drawing state. Scale the
         // context afterward so our geometry can keep using ordinary CSS pixels.
         context.setTransform(ratio, 0, 0, ratio, 0, 0);
-        sizes = links.map((link) => {
-          const bounds = link.getBoundingClientRect();
+        sizes = labels.map((label) => {
+          const bounds = label.getBoundingClientRect();
           return { width: bounds.width, height: bounds.height };
         });
         draw();
@@ -433,19 +551,32 @@ const { nodes } = createPageCloud(pages);
       // font loads. A separate observer watches the root theme attribute.
       const resizeObserver = new ResizeObserver(resize);
       resizeObserver.observe(viewport);
-      links.forEach((link) => resizeObserver.observe(link));
+      labels.forEach((label) => resizeObserver.observe(label));
       const themeObserver = new MutationObserver(readTheme);
       // documentElement is <html>. Watch only data-theme, which the shared
       // layout changes when a visitor chooses a different color theme.
       themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
 
+      const visibilityObserver = typeof IntersectionObserver === "function"
+        ? new IntersectionObserver(([entry]) => {
+            inView = entry.isIntersecting;
+            previousDriftTime = undefined;
+            requestDraw();
+          })
+        : undefined;
+      visibilityObserver?.observe(this);
+      updateMotionButton();
+
       // Keep one teardown function for all resources: cancel the queued frame,
       // remove signaled listeners, and stop observing sizes and theme changes.
       this.cleanup = () => {
+        disposed = true;
         cancelAnimationFrame(frame);
+        clearTimeout(resumeTimer);
         controller.abort();
         resizeObserver.disconnect();
         themeObserver.disconnect();
+        visibilityObserver?.disconnect();
       };
     }
 
@@ -499,6 +630,7 @@ const { nodes } = createPageCloud(pages);
      inside .rotation-buttons. inline-flex aligns each icon/label internally.
      A 44px minimum height makes the controls easier to tap. */
   .cloud-reset,
+  .cloud-motion,
   .rotation-buttons button {
     display: inline-flex;
     align-items: center;
@@ -525,6 +657,7 @@ const { nodes } = createPageCloud(pages);
 
   /* :hover supplies feedback while a pointer rests over a control. */
   .cloud-reset:hover,
+  .cloud-motion:hover,
   .rotation-buttons button:hover {
     border-color: var(--color-border);
     background: var(--color-surface);
@@ -607,7 +740,7 @@ const { nodes } = createPageCloud(pages);
   /* max-content fits the text. min() picks the smaller width cap, while calc()
      reserves horizontal space when capping each label's box in a narrow viewport.
      The nowrap rule below keeps the text on one line, so long text can overflow. */
-  .cloud-link {
+  .cloud-label {
     display: inline-flex;
     align-items: center;
     width: max-content;
@@ -627,7 +760,7 @@ const { nodes } = createPageCloud(pages);
 
   /* Start every label at the viewport origin; JS uses translate(x,y) to move it
      next to its dot. Reduced opacity makes inactive labels less prominent. */
-  [data-ready="true"] .cloud-link {
+  [data-ready="true"] .cloud-label {
     position: absolute;
     top: 0;
     left: 0;
@@ -674,6 +807,19 @@ const { nodes } = createPageCloud(pages);
     font-size: 1rem;
   }
 
+  .cloud-motion {
+    margin-inline-start: 0.25rem;
+  }
+
+  .motion-play,
+  .cloud-motion[data-paused="true"] .motion-pause {
+    display: none;
+  }
+
+  .cloud-motion[data-paused="true"] .motion-play {
+    display: block;
+  }
+
   /* Desktop wording is the default; a pointer media query switches it below. */
   .touch-help {
     display: none;
@@ -705,7 +851,7 @@ const { nodes } = createPageCloud(pages);
   /* A coarse primary pointer is usually a touchscreen. Enlarge link tap targets
      and show gesture instructions appropriate for that input method. */
   @media (pointer: coarse) {
-    .cloud-link {
+    .cloud-label {
       min-height: 44px;
     }
 
@@ -721,7 +867,7 @@ const { nodes } = createPageCloud(pages);
   /* Respect the operating system's reduced-motion preference by removing label
      highlight transitions. Directly controlled map rotation still works. */
   @media (prefers-reduced-motion: reduce) {
-    .cloud-link {
+    .cloud-label {
       transition: none;
     }
   }

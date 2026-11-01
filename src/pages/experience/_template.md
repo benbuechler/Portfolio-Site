@@ -17,7 +17,8 @@ period:
 sortOrder: 
 
 # Optional: false keeps the summary on the timeline without a story link.
-# true (the default when omitted) makes the card open its full story.
+# The home-page node stays visible but cannot be clicked to open a page.
+# true (the default when omitted) enables the timeline and node links.
 hasStory: true
 ---
 

@@ -3,6 +3,7 @@
 import BaseLayout from "../layouts/BaseLayout.astro";
 import type { MarkdownInstance } from "astro";
 import type { ProjectFrontmatter, ProjectPreview } from "../lib/projects";
+import { getProjectImages } from "../lib/projects";
 
 // Exclude underscore-prefixed templates/drafts from discovery and page routes.
 const projectFiles = import.meta.glob<MarkdownInstance<ProjectFrontmatter>>(
@@ -16,23 +17,26 @@ const projects: ProjectPreview[] = Object.entries(projectFiles)
     const filename = file.split("/").at(-1) ?? "";
     if (!project.url || /^[_.]/.test(filename) || /[\[\]]/.test(filename)) return [];
 
-    const { title, summary, image, imageAlt, tools = [], sortOrder = 0 } = project.frontmatter;
+    const { title, summary, image: rawImage, imageAlt, date, tools = [], sortOrder = 0 } = project.frontmatter;
     // Give a useful build error when a new project is missing its card details.
-    for (const [field, value] of Object.entries({ title, summary, image, imageAlt })) {
+    for (const [field, value] of Object.entries({ title, summary })) {
       if (typeof value !== "string" || !value.trim()) {
         throw new Error(`Project "${filename}" needs a non-empty ${field}.`);
       }
     }
-    if (!/^\/(?!\/)/.test(image)) {
-      throw new Error(`Project "${filename}" needs an image path starting with /, such as /images/projects/my-project.jpg.`);
-    }
+    // Validate both the optional cover and the full-page gallery consistently.
+    getProjectImages(project.frontmatter);
+    const image = rawImage?.trim() || undefined;
     if (!Array.isArray(tools) || tools.some((tool) => typeof tool !== "string" || !tool.trim())) {
       throw new Error(`Project "${filename}" needs tools to be an array of non-empty strings.`);
+    }
+    if (date !== undefined && (typeof date !== "string" || !date.trim())) {
+      throw new Error(`Project "${filename}" needs date to be a non-empty string, such as "October 2026", or omitted.`);
     }
     if (typeof sortOrder !== "number" || !Number.isFinite(sortOrder)) {
       throw new Error(`Project "${filename}" needs a numeric sortOrder.`);
     }
-    return [{ title, summary, image, imageAlt, tools, sortOrder, href: project.url }];
+    return [{ title, summary, image, imageAlt, date, tools, sortOrder, href: project.url }];
   })
   .sort((a, b) => a.sortOrder - b.sortOrder || a.title.localeCompare(b.title, "en"));
 ---
@@ -57,16 +61,19 @@ const projects: ProjectPreview[] = Object.entries(projectFiles)
               {/* One native link makes the whole card work with touch, mouse,
                   and keyboard. The title names it without reading every tag. */}
               <a class="project-link" href={project.href} aria-labelledby={`project-title-${index}`} aria-describedby={`project-summary-${index}`}>
-                <img
-                  class="project-image"
-                  src={`${basePath}${project.image}`}
-                  alt={project.imageAlt}
-                  width="960"
-                  height="600"
-                  loading={index === 0 ? "eager" : "lazy"}
-                  decoding="async"
-                />
+                {project.image && (
+                  <img
+                    class="project-image"
+                    src={`${basePath}${project.image}`}
+                    alt={project.imageAlt}
+                    width="960"
+                    height="600"
+                    loading={index === 0 ? "eager" : "lazy"}
+                    decoding="async"
+                  />
+                )}
                 <div class="project-content">
+                  {project.date && <p class="project-date">{project.date}</p>}
                   <h3 id={`project-title-${index}`}>{project.title}</h3>
                   <p class="project-summary" id={`project-summary-${index}`}>{project.summary}</p>
                   {project.tools.length > 0 && (
@@ -148,6 +155,12 @@ const projects: ProjectPreview[] = Object.entries(projectFiles)
     font-size: clamp(1.25rem, 2vw, 1.625rem);
     line-height: 1.3;
     letter-spacing: -0.02em;
+  }
+
+  .project-date {
+    margin: 0 0 0.75rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
   }
 
   .project-summary {

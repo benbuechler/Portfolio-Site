@@ -30,6 +30,13 @@
   --max-width: 1600px;
   --page-gutter: clamp(1rem, 4vw, 4rem);
   --border-radius: 12px;
+  /* The header keeps its expanded space; only the fixed bar changes height. */
+  --nav-expanded-height: 9rem;
+  --nav-height: var(--nav-expanded-height);
+}
+
+:root.nav-compact {
+  --nav-height: 4.25rem;
 }
 
 /* [attribute="value"] selects an element with that exact attribute value.
@@ -71,6 +78,7 @@
 /* In-page anchor links scroll gradually rather than jumping immediately. */
 html {
   scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--nav-height) + 1rem);
 }
 
 /* Stack header, main, and footer vertically. The main area's flex: 1 below
@@ -94,12 +102,12 @@ a:focus-visible {
 }
 
 /* This keyboard shortcut jumps past navigation to <main id="main-content">.
-   Absolute positioning removes it from normal flow; z-index raises its layer. */
+   Fixed positioning and z-index keep it available above the pinned nav. */
 .skip-link {
-  position: absolute;
+  position: fixed;
   top: 1rem;
   left: 1rem;
-  z-index: 1;
+  z-index: 100;
   padding: 0.75rem 1rem;
   background: var(--color-surface);
   transform: translateY(-200%); /* Hide it above its normal position. */
@@ -127,6 +135,20 @@ a {
 
 /* Shared Navigation */
 
+.site-header {
+  position: relative;
+  z-index: 20;
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+/* Reserve the expanded height even while scrolling with the smaller bar.
+   Keeping this height constant also prevents the scroll threshold oscillating. */
+.site-header.header-ready {
+  height: var(--nav-expanded-height);
+  border-bottom: 0;
+}
+
 /* Flexbox arranges children in a row by default. Push the brand and links
    apart, align their centres, and allow wrapping when horizontal space runs out. */
 .site-nav {
@@ -141,6 +163,25 @@ a {
   gap: 1rem;
 }
 
+/* The bar spans the viewport; its padding aligns the contents with the site's
+   centred main column even on screens wider than --max-width. */
+.header-ready .site-nav {
+  position: fixed;
+  inset: 0 0 auto;
+  height: var(--nav-height);
+  max-width: none;
+  padding-inline: max(var(--page-gutter), calc((100% - var(--max-width)) / 2 + var(--page-gutter)));
+  background: var(--color-bg);
+  border-bottom: 1px solid var(--border-color);
+  transition: height 220ms ease, padding-block 220ms ease, box-shadow 220ms ease;
+}
+
+.nav-compact .site-nav {
+  padding-block: 0.5rem;
+  border-bottom-color: var(--color-border);
+  box-shadow: 0 6px 24px color-mix(in srgb, var(--color-text) 8%, transparent);
+}
+
 /* Keep navigation links together with responsive spacing. An automatic start
    margin absorbs spare room, pushing the links and following controls right. */
 .nav-links {
@@ -151,7 +192,7 @@ a {
   margin-inline-start: auto;
 }
 
-/* Keep the theme button immediately before the menu button in a separate group.
+/* Keep the menu button immediately before the theme button in a separate group.
    Because this group is outside .nav-links, collapsing the menu cannot hide it.
    flex-shrink: 0 preserves both controls' tap targets when space is limited. */
 .nav-actions {
@@ -161,8 +202,7 @@ a {
   flex-shrink: 0;
 }
 
-/* The menu button starts hidden. The narrow-screen rules show it once
-   JavaScript has connected the menu events (.menu-ready). */
+/* The menu button starts hidden; collapsed navigation reveals it below. */
 .nav-toggle {
   display: none;
   align-items: center;
@@ -197,6 +237,10 @@ a {
 
 /* At 768 CSS pixels or narrower, switch from desktop navigation to a menu. */
 @media (max-width: 768px) {
+  :root {
+    --nav-expanded-height: 6rem;
+  }
+
   /* Logical "block" spacing is top/bottom in this horizontal writing mode. */
   .site-nav {
     padding-block: 1rem;
@@ -205,11 +249,6 @@ a {
   /* Keep the controls against the right edge of the first row, beside the logo. */
   .nav-actions {
     margin-inline-start: auto;
-  }
-
-  /* :not() excludes hidden controls. A space selects a descendant element. */
-  .menu-ready .nav-toggle:not([hidden]) {
-    display: inline-flex;
   }
 
   /* order changes the visual flex order: links move below the logo and controls.
@@ -225,20 +264,48 @@ a {
     border-top: 1px solid var(--color-border);
   }
 
-  /* Without JavaScript these hiding rules do not match, so links stay usable. */
-  .menu-ready .nav-links {
-    display: none;
-  }
-
-  /* No space between classes means the same element must have both classes. */
-  .menu-ready.menu-open .nav-links {
-    display: flex;
-  }
-
   /* Make each mobile link easier to tap by increasing vertical padding. */
   .site-nav .nav-links a {
     padding-block: 0.75rem;
   }
+}
+
+/* Mobile widths and the compact desktop bar use the same native menu button.
+   The dropdown overlays the page, so opening it never resizes the header. */
+.site-nav[data-collapsed="true"] .nav-actions {
+  margin-inline-start: auto;
+}
+
+.site-nav[data-collapsed="true"] .nav-toggle:not([hidden]) {
+  display: inline-flex;
+}
+
+.site-nav[data-collapsed="true"] .nav-links {
+  display: none;
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: max(var(--page-gutter), calc((100% - var(--max-width)) / 2 + var(--page-gutter)));
+  width: min(24rem, calc(100% - 2 * var(--page-gutter)));
+  max-height: calc(100svh - var(--nav-height) - 1.5rem);
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0.25rem;
+  margin: 0;
+  padding: 0.5rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--border-radius);
+  background: var(--color-surface);
+  box-shadow: 0 12px 32px color-mix(in srgb, var(--color-text) 12%, transparent);
+}
+
+.site-nav[data-collapsed="true"].menu-open .nav-links {
+  display: flex;
+}
+
+.site-nav[data-collapsed="true"] .nav-links a {
+  padding: 0.75rem 1rem;
 }
 
 /* This native button works with pointer, Enter, and Space. Only display it
@@ -311,6 +378,7 @@ a {
   font-size: 2.5rem;
   font-weight: 800;
   white-space: nowrap;
+  transition: font-size 220ms ease;
 }
 
 .logo-size,
@@ -374,8 +442,14 @@ a {
   }
 }
 
+.nav-compact .logo {
+  font-size: 1.5rem;
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .logo-reveal {
+  .logo-reveal,
+  .logo,
+  .header-ready .site-nav {
     transition: none;
   }
 }

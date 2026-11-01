@@ -1,9 +1,14 @@
+// Reuse the timeline's parsed YAML metadata for experience-node navigation.
+import { experiences } from "./experiences";
+
 // An exported interface describes an object's shape for TypeScript and other files.
 // It catches mistakes while editing; it does not create an object at runtime.
 export interface SitePage {
   // href is the destination URL; label is the human-readable link text.
   href: string;
   label: string;
+  // False keeps the node visible without offering a story destination.
+  hasStory?: boolean;
 }
 
 /** Discover file-based pages without importing or rendering their components. */
@@ -77,7 +82,7 @@ export function getSitePages(pageFiles: string[], base = "/"): SitePage[] {
   });
 }
 
-// Only file names are needed. `?raw` avoids importing page components recursively.
+// Use file names for discovery. `?raw` avoids importing page components recursively.
 // New static pages are picked up by Vite in development and on the next build.
 // For generated/dynamic pages, supply their resolved URLs separately when added.
 // import.meta.glob is provided by Vite (Astro's build tooling), not plain JS.
@@ -91,5 +96,14 @@ const pageFiles = import.meta.glob("/src/pages/**/*.{astro,md,mdx,html}", {
 
 // Object.keys extracts the glob object's filenames. BASE_URL is Astro's configured
 // deployment base path, so links also work when hosted under a subdirectory.
+// Match the timeline's story flags by URL while keeping every discovered node.
+const experienceStories = new Map(
+  experiences.map(({ href, hasStory }) => [href.replace(/\/$/, ""), hasStory]),
+);
+
 // index.astro passes this exported list into PageCloud as its pages prop.
-export const sitePages = getSitePages(Object.keys(pageFiles), import.meta.env.BASE_URL);
+export const sitePages = getSitePages(Object.keys(pageFiles), import.meta.env.BASE_URL)
+  .map((page) => {
+    const hasStory = experienceStories.get(page.href.replace(/\/$/, ""));
+    return hasStory === undefined ? page : { ...page, hasStory };
+  });
