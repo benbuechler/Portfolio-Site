@@ -40,7 +40,11 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 <!doctype html>
 <html lang="en">
   <head>
-    <!-- Metadata configures the document rather than adding visible page content.
+
+    // Umami analytics script, loaded asynchronously to avoid blocking page rendering.
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="16fef081-6810-434f-8aa8-86e60732cf81"></script>
+    
+      <!-- Metadata configures the document rather than adding visible page content.
          UTF-8 supports Unicode; viewport makes mobile CSS use the device width.
          Curly braces insert the frontmatter's description into the attribute. -->
     <meta charset="UTF-8" />
