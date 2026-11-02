@@ -10,9 +10,9 @@ summary: Building the foundations for business thinking early.
 category: Education
 period: 2019 - 2024
 # Smaller numbers come first, so this entry precedes the entry with order 10.
-sortOrder: 9
+sortOrder: 2
 # Show this milestone on the timeline without linking to a full story.
-hasStory: true
+hasStory: false
 ---
 
 <!-- Its location under src/pages produces /experience/business-degree.

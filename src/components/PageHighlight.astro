@@ -24,7 +24,7 @@ const { page } = Astro.props;
   <!-- The entire card is one native link, so it works without browser scripts.
        Braces insert the selected page's values. The matching IDs provide a
        concise link name and a separate description for assistive technology. -->
-  <a class="highlight-card" href={page.href} aria-labelledby="page-highlight-title" aria-describedby="page-highlight-summary">
+  <a class="highlight-card" href={page.href} aria-labelledby="page-highlight-title" aria-describedby="page-highlight-summary" data-analytics-event="featured-page-click" data-analytics-location="home-highlight" data-analytics-label={page.title}>
     <div class="highlight-content">
       {page.category && <p class="highlight-category">{page.category}</p>}
       <h3 id="page-highlight-title">{page.title}</h3>

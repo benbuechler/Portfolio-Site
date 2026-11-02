@@ -37,6 +37,9 @@ const { experiences } = Astro.props;
             <Card
               class:list={["timeline-card", { "timeline-link": hasStory }]}
               href={hasStory ? experience.href : undefined}
+              data-analytics-event={hasStory ? "experience-click" : undefined}
+              data-analytics-location={hasStory ? "experience-timeline" : undefined}
+              data-analytics-label={hasStory ? experience.title : undefined}
               role={hasStory ? undefined : "group"}
               aria-labelledby={`experience-title-${index}`}
               aria-describedby={`experience-period-${index} experience-summary-${index}`}

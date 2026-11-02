@@ -24,6 +24,9 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
             href={image.src}
             data-gallery-image
             data-caption={image.caption}
+            data-analytics-event="gallery-image-click"
+            data-analytics-location="gallery"
+            data-analytics-label={`Photo ${index + 1}`}
             aria-label={`View photo ${index + 1} of ${pictures.length}: ${image.alt}`}
           >
             <img src={image.src} alt={image.alt} loading={index === 0 ? "eager" : "lazy"} decoding="async" />
@@ -64,6 +67,8 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
 )}
 
 <script>
+  import { trackEvent } from "../lib/analytics";
+
   class ProjectGallery extends HTMLElement {
     private cleanup?: () => void;
 
@@ -88,6 +93,11 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
       let opener: HTMLAnchorElement | undefined;
       let previousOverflow: { body: string; root: string } | undefined;
       let backdropPress = false;
+      let closeInput: "button" | "keyboard" | "backdrop" = "keyboard";
+
+      const trackGalleryEvent = (name: string, input: string) => {
+        trackEvent(name, { location: "gallery", photo: current + 1, total: pictures.length, input });
+      };
 
       const showImage = (index: number) => {
         current = (index + pictures.length) % pictures.length;
@@ -97,6 +107,12 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
         caption.textContent = picture.caption;
         caption.hidden = !picture.caption;
         counter.textContent = `Photo ${current + 1} of ${pictures.length}`;
+      };
+
+      const browsePhoto = (direction: -1 | 1, input: "button" | "keyboard") => {
+        if (!dialog.open || pictures.length < 2) return;
+        showImage(current + direction);
+        trackGalleryEvent(direction === -1 ? "gallery-previous" : "gallery-next", input);
       };
 
       // Remember inline values so closing or removing the gallery restores the
@@ -130,20 +146,27 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
           };
           document.body.style.overflow = "hidden";
           document.documentElement.style.overflow = "hidden";
+          closeInput = "keyboard";
+          trackGalleryEvent("gallery-open", event.detail === 0 ? "keyboard" : "pointer");
         }, options);
       });
 
-      this.querySelector("[data-close]")?.addEventListener("click", () => dialog.close(), options);
-      this.querySelector("[data-previous]")?.addEventListener("click", () => showImage(current - 1), options);
-      this.querySelector("[data-next]")?.addEventListener("click", () => showImage(current + 1), options);
+      this.querySelector("[data-close]")?.addEventListener("click", () => {
+        closeInput = "button";
+        dialog.close();
+      }, options);
+      this.querySelector("[data-previous]")?.addEventListener("click", () => browsePhoto(-1, "button"), options);
+      this.querySelector("[data-next]")?.addEventListener("click", () => browsePhoto(1, "button"), options);
       dialog.addEventListener("keydown", (event) => {
         if (pictures.length < 2 || event.altKey || event.ctrlKey || event.metaKey) return;
         if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
           event.preventDefault();
-          showImage(current + (event.key === "ArrowLeft" ? -1 : 1));
+          browsePhoto(event.key === "ArrowLeft" ? -1 : 1, "keyboard");
         }
       }, options);
+      dialog.addEventListener("cancel", () => { closeInput = "keyboard"; }, options);
       dialog.addEventListener("close", () => {
+        if (opener) trackGalleryEvent("gallery-close", closeInput);
         unlockScroll();
         if (this.isConnected && opener?.isConnected) opener.focus({ preventScroll: true });
         opener = undefined;
@@ -159,7 +182,10 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
         backdropPress = event.target === dialog && outsidePanel(event);
       }, options);
       dialog.addEventListener("click", (event) => {
-        if (backdropPress && event.target === dialog && outsidePanel(event)) dialog.close();
+        if (backdropPress && event.target === dialog && outsidePanel(event)) {
+          closeInput = "backdrop";
+          dialog.close();
+        }
         backdropPress = false;
       }, options);
 

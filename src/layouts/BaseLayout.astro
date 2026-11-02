@@ -41,8 +41,17 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 <html lang="en">
   <head>
 
-    // Umami analytics script, loaded asynchronously to avoid blocking page rendering.
-    <script defer src="https://cloud.umami.is/script.js" data-website-id="16fef081-6810-434f-8aa8-86e60732cf81"></script>
+    <!-- Umami records pageviews; the shared browser script below records actions. -->
+    <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id="16fef081-6810-434f-8aa8-86e60732cf81"></script>
+
+    <!-- Load Microsoft Clarity on every page using this shared layout. -->
+    <script is:inline type="text/javascript">
+      (function(c,l,a,r,i,t,y){
+        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+      })(window, document, "clarity", "script", "z75b9f8g17");
+    </script>
     
       <!-- Metadata configures the document rather than adding visible page content.
          UTF-8 supports Unicode; viewport makes mobile CSS use the device width.
@@ -82,17 +91,17 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 
   <body>
     <!-- Keyboard users can jump past the navigation to the matching id below. -->
-    <a class="skip-link" href="#main-content">Skip to content</a>
+    <a class="skip-link" href="#main-content" data-analytics-event="skip-to-content" data-analytics-location="header">Skip to content</a>
     <header class="site-header">
       <!-- nav identifies a navigation landmark; aria-label gives it a useful name. -->
       <nav class="site-nav" aria-label="Main navigation">
-        <a class="logo" href="/" aria-label="Ben Buechler home">
+        <a class="logo" href="/" aria-label="Ben Buechler home" data-analytics-event="navigation-click" data-analytics-location="header-logo">
           <!-- Keep the initials and reveal the remaining letters. The invisible
                copy reserves space so expanding the name never moves the menu. -->
           <span class="logo-size" aria-hidden="true">B<span>en&nbsp;</span>B<span>uechler</span><span>.</span></span>
           <span class="logo-wordmark" aria-hidden="true">B<span class="logo-reveal"><span>en&nbsp;</span></span>B<span class="logo-reveal"><span>uechler</span></span><span class="logo-dot">.</span></span>
         </a>
-        <div class="nav-links" id="nav-links">
+        <div class="nav-links" id="nav-links" data-analytics-location="header-navigation">
           <!-- map returns one anchor per object. ({ href, label }) destructures
                each object; the arrow function's parentheses return its markup.
                aria-current is "page" for an exact match and "location" for a
@@ -100,7 +109,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
                !== means "not equal"; && requires both conditions to be true;
                backticks with ${...} insert a value into a template string. -->
           {navigation.map(({ href, label }) => (
-            <a href={href} aria-current={currentPath === href ? "page" : href !== "/" && currentPath.startsWith(`${href}/`) ? "location" : undefined}>
+            <a href={href} data-analytics-event="navigation-click" aria-current={currentPath === href ? "page" : href !== "/" && currentPath.startsWith(`${href}/`) ? "location" : undefined}>
               {label}
             </a>
           ))}
@@ -153,6 +162,10 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     <!-- Unlike frontmatter, this bundled script runs in the visitor's browser.
          Astro processes its TypeScript into JavaScript before shipping it. -->
     <script>
+      import { initLinkTracking, trackEvent } from "../lib/analytics";
+
+      initLinkTracking();
+
       // querySelector finds the first matching HTML element or returns null.
       // <HTMLElement> and <HTMLButtonElement> tell TypeScript the expected type;
       // these annotations do not perform a runtime check or create an element.
@@ -217,7 +230,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         // addEventListener registers a callback to run later, when the event fires.
         menuToggle.addEventListener("click", () => {
           // Reading the old attribute and comparing it inverts the current state.
-          setMenuOpen(menuToggle.getAttribute("aria-expanded") !== "true");
+          const open = menuToggle.getAttribute("aria-expanded") !== "true";
+          setMenuOpen(open);
+          trackEvent("menu-toggle", { location: "header", open });
         });
         document.addEventListener("keydown", (event) => {
           // Escape closes an open menu and returns keyboard focus to its button.
@@ -267,6 +282,7 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
         toggle.addEventListener("click", () => {
           const theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
           setTheme(theme);
+          trackEvent("theme-change", { location: "header", theme });
           hasPreference = true;
           try {
             // Save a deliberate choice so it wins over later system changes.

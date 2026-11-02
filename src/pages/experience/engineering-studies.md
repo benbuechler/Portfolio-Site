@@ -5,7 +5,7 @@ layout: ../../layouts/ExperienceLayout.astro
 # The layout renders this title as h1; the timeline also uses it for the link.
 title: Electrical engineering studies
 # Used as the timeline preview and the detail page's metadata description.
-summary: My ongoing studies in electrical engineering, driven by an interest in technology and innovation.
+summary: My ongoing studies in electrical engineering, driven by a life-long interest in technology and innovation.
 # These strings describe the entry; the period is displayed rather than parsed.
 category: Education
 period: Ongoing
@@ -15,7 +15,10 @@ sortOrder: 10
 gallery:
   - src: /images/experience/Fanshawe Club Logo.png
     alt: "Fanshawe Engineering Club Logo"
-    caption: "Logo Designed by Me"
+    caption: "Club logo designed by me"
+
+  - src: /images/experience/IEEE-Logo.jpg
+    alt: "IEEE Logo"
 ---
 
 # Taking the Long Way to Engineering

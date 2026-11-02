@@ -47,6 +47,58 @@ The [PageHighlight component](src/components/PageHighlight.astro) renders this
 content below the home-page introduction. You choose the feature and its preview
 text manually; changing another page does not automatically replace them.
 
+## Umami analytics
+
+[BaseLayout](src/layouts/BaseLayout.astro) loads the existing Umami Cloud tracker
+on every page. Pageviews are automatic; [analytics.ts](src/lib/analytics.ts) uses
+[Umami's JavaScript API](https://docs.umami.is/docs/tracker-functions) for actions.
+After deploying these changes, find actions under **Events** in Umami and inspect
+their **Properties** to compare destinations, placements, and controls.
+
+| Event | Interaction |
+| --- | --- |
+| `navigation-click` | Header navigation or home logo. |
+| `cta-click` | Homepage View Projects / Contact Me buttons. |
+| `featured-page-click` | Homepage featured story. |
+| `project-click` / `experience-click` | Project grid or linked timeline card. |
+| `contact-click` | LinkedIn, GitHub, Email, or YouTube contact link. |
+| `return-click` | Top/bottom links back to the projects or experience hub. |
+| `map-navigate` | Map label or canvas dot opening a page. |
+| `map-rotate` / `map-reset` | Rotation buttons, keyboard controls, or a completed drag. |
+| `map-motion-change` | Explicit pause/resume of automatic rotation. |
+| `gallery-open` / `gallery-next` / `gallery-previous` / `gallery-close` | Photo viewer actions, including keyboard and backdrop dismissal. |
+| `gallery-image-click` | Direct photo link when opening a separate tab or using the fallback viewer. |
+| `menu-toggle` / `theme-change` | Menu open/close button or a deliberate theme choice. |
+| `skip-to-content` | Keyboard skip link. |
+| `link-click` / `outbound-click` | Other links, including future Markdown links. |
+
+Every event includes `page` (the source pathname). Link events also include
+`label`, `destination`, `location`, and `type`; contact labels identify the
+platform. Top/bottom return links have distinct locations. Map events include
+input method and direction where applicable, and gallery events include the
+one-based `photo` number and `total`. State changes include `theme`, `open`, or
+`paused`. Initial setup, system preference changes, and automatic map movement
+do not emit action events.
+
+New links are tracked automatically. Give a link a custom event/placement with
+these attributes; `data-analytics-location` can also go on a containing element:
+
+```html
+<a href="/projects" data-analytics-event="cta-click"
+   data-analytics-location="home-hero" data-analytics-label="View Projects">
+  View Projects
+</a>
+```
+
+Use these `data-analytics-*` attributes instead of `data-umami-event` to avoid
+double counting. For a new interactive control, call `trackEvent()` after the
+action succeeds. Keep names under Umami's 50-character limit and send only
+non-sensitive action metadata. Custom destination properties omit query strings,
+fragments, credentials, and email/phone addresses. Tracking never waits before
+navigation, and unavailable or blocked Umami calls do not stop site controls.
+
+Run `node --test src/lib/analytics.test.ts` for the analytics regression checks.
+
 ## Home-page map motion
 
 The node map gently drifts while idle, easing toward a new random direction

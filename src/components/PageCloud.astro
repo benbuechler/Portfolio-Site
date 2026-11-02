@@ -55,6 +55,9 @@ const { nodes } = createPageCloud(pages);
             class:list={["cloud-label", { "cloud-link": hasStory }]}
             href={hasStory ? node.href : undefined}
             data-node={index}
+            data-analytics-event={hasStory ? "map-navigate" : undefined}
+            data-analytics-location={hasStory ? "page-cloud" : undefined}
+            data-analytics-label={hasStory ? pages[index].label : undefined}
             aria-label={hasStory ? pages[index].label : undefined}
             draggable="false"
           >
@@ -93,6 +96,7 @@ const { nodes } = createPageCloud(pages);
      and bundles the imports, unlike the build-time frontmatter above. -->
 <script>
   import { createPageCloud, layoutPageCloud, layoutCloudLabels, DEFAULT_CLOUD_ROTATION } from "../lib/page-cloud";
+  import { trackEvent } from "../lib/analytics";
   import type { SitePage } from "../lib/site-pages";
 
   // `extends` inherits standard HTML element behavior. The custom element keeps
@@ -421,6 +425,8 @@ const { nodes } = createPageCloud(pages);
         if (event.type === "pointerup" && drag.moved) {
           // A drag starting on a link must never become an accidental page visit.
           suppressClick = true;
+          // Count the completed gesture once, rather than every pointer movement.
+          trackEvent("map-rotate", { location: "page-cloud", input: "pointer" });
         }
         drag = undefined;
         // delete removes the data attribute; release capture if it was acquired.
@@ -483,6 +489,7 @@ const { nodes } = createPageCloud(pages);
         motionChoice = !wantsMotion();
         updateMotionButton();
         holdDrift();
+        trackEvent("map-motion-change", { location: "page-cloud", input: "button", paused: !wantsMotion() });
       }, options);
       reducedMotion.addEventListener("change", () => {
         // A newly enabled reduced-motion setting stops an existing drift.
@@ -511,15 +518,27 @@ const { nodes } = createPageCloud(pages);
           default: return;
         }
         event.preventDefault();
+        // Holding a key still rotates smoothly but records one event per press.
+        if (!event.repeat) {
+          if (event.key === "Home") {
+            trackEvent("map-reset", { location: "page-cloud", input: "keyboard" });
+          } else {
+            trackEvent("map-rotate", { location: "page-cloud", input: "keyboard", direction: event.key.slice(5).toLowerCase() });
+          }
+        }
       }, options);
       // Optional chaining permits a missing reset button. data-rotate selects
       // the horizontal or vertical change associated with each arrow button.
-      this.querySelector(".cloud-reset")?.addEventListener("click", reset, options);
+      this.querySelector(".cloud-reset")?.addEventListener("click", () => {
+        reset();
+        trackEvent("map-reset", { location: "page-cloud", input: "button" });
+      }, options);
       this.querySelectorAll<HTMLButtonElement>("[data-rotate]").forEach((button) => {
         button.addEventListener("click", () => {
           const direction = button.dataset.rotate;
           setRotation(rotation.yaw + (direction === "left" ? -0.25 : direction === "right" ? 0.25 : 0),
             rotation.pitch + (direction === "up" ? -0.2 : direction === "down" ? 0.2 : 0));
+          trackEvent("map-rotate", { location: "page-cloud", input: "button", direction: direction ?? "" });
         }, options);
       });
 

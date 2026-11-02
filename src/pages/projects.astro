@@ -60,7 +60,7 @@ const projects: ProjectPreview[] = Object.entries(projectFiles)
             <article class="project-card">
               {/* One native link makes the whole card work with touch, mouse,
                   and keyboard. The title names it without reading every tag. */}
-              <a class="project-link" href={project.href} aria-labelledby={`project-title-${index}`} aria-describedby={`project-summary-${index}`}>
+              <a class="project-link" href={project.href} aria-labelledby={`project-title-${index}`} aria-describedby={`project-summary-${index}`} data-analytics-event="project-click" data-analytics-location="projects-grid" data-analytics-label={project.title}>
                 {project.image && (
                   <img
                     class="project-image"

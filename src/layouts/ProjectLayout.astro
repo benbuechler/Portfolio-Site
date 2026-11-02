@@ -18,7 +18,7 @@ const projectsHref = `${basePath}/projects`;
 
 <BaseLayout title={title} description={summary}>
   <article class="project-article">
-    <a class="back-link text-link" href={projectsHref}><span aria-hidden="true">←</span> Back to projects</a>
+    <a class="back-link text-link" href={projectsHref} data-analytics-event="return-click" data-analytics-location="project-top"><span aria-hidden="true">←</span> Back to projects</a>
 
     <div class:list={["project-layout", { "has-gallery": images.length > 0 }]}>
       <header class="project-heading">
@@ -40,7 +40,7 @@ const projectsHref = `${basePath}/projects`;
         </aside>
       )}
 
-      <div class="project-body">
+      <div class="project-body" data-analytics-location="project-content">
         <!-- The Markdown body becomes HTML here. Start its sections with ##;
              the project title above already supplies this page's h1. -->
         <slot />
@@ -48,7 +48,7 @@ const projectsHref = `${basePath}/projects`;
       </div>
 
       <footer class="project-footer">
-        <a class="text-link" href={projectsHref}><span aria-hidden="true">←</span> All projects</a>
+        <a class="text-link" href={projectsHref} data-analytics-event="return-click" data-analytics-location="project-bottom"><span aria-hidden="true">←</span> All projects</a>
       </footer>
     </div>
   </article>
