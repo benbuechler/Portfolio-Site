@@ -14,9 +14,12 @@ import { sitePages } from "../lib/site-pages";
 import { homeHighlight } from "../lib/home-highlight";
 ---
 
-<!-- A capitalized tag renders an imported component. title="Home" passes a
+<!-- A capitalized tag renders an imported component. title passes a
      prop (an input); everything inside BaseLayout fills its <slot />. -->
-<BaseLayout title="Home">
+<BaseLayout
+  title="Electrical Engineering Portfolio"
+  description="Explore Ben Buechler’s electrical engineering portfolio, from a custom Voron 2.4 3D printer to web projects, education, and professional experience."
+>
   <!-- Classes connect this structure to the scoped CSS below. A div is a
        neutral grouping element; Header supplies the actual heading and text. -->
   <div class="home-hero">

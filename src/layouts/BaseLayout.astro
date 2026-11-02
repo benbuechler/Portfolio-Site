@@ -4,6 +4,7 @@
 // Importing the stylesheet here makes its shared rules available on every page
 // that uses this layout. A relative path starts from this file's directory.
 import "../styles/global.css";
+import Seo from "../components/Seo.astro";
 
 // Props describes the values another component may pass to <BaseLayout>.
 // TypeScript uses these annotations for editor checks; they are not browser code.
@@ -11,13 +12,19 @@ interface Props {
   title: string;
   // The ? makes description optional; title is required.
   description?: string;
+  image?: string;
+  imageAlt?: string;
+  noindex?: boolean;
 }
 
 // Object destructuring reads named properties from Astro.props into variables.
 // The = value supplies a default when the caller leaves description undefined.
 const {
   title,
-  description = "Engineering portfolio of Ben Buechler",
+  description = "Explore Ben Buechler’s electrical engineering projects, education, and professional experience.",
+  image,
+  imageAlt,
+  noindex = false,
 } = Astro.props;
 
 // An array ([]) holds one object ({}) per navigation link. Keeping the data
@@ -40,6 +47,9 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
 <!doctype html>
 <html lang="en">
   <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <Seo title={title} description={description} image={image} imageAlt={imageAlt} noindex={noindex} />
 
     <!-- Umami records pageviews; the shared browser script below records actions. -->
     <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id="16fef081-6810-434f-8aa8-86e60732cf81"></script>
@@ -53,12 +63,6 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
       })(window, document, "clarity", "script", "z75b9f8g17");
     </script>
     
-      <!-- Metadata configures the document rather than adding visible page content.
-         UTF-8 supports Unicode; viewport makes mobile CSS use the device width.
-         Curly braces insert the frontmatter's description into the attribute. -->
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="description" content={description} />
     <!-- is:inline tells Astro to leave this script in place without bundling it.
          In the head, it can set the theme before the browser draws the body. -->
     <script is:inline>
@@ -83,10 +87,8 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
             ? "dark"
             : "light";
     </script>
-    <!-- Files in public/ are served from the site root, so this URL omits public/.
-         The title expression supplies the browser tab's page-specific text. -->
+    <!-- Files in public/ are served from the site root. -->
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>{title} | Ben Buechler</title>
   </head>
 
   <body>

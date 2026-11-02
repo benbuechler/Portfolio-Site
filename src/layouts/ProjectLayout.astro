@@ -14,9 +14,11 @@ const images = getProjectImages(Astro.props.frontmatter);
 // Include Astro's base path so links and public images also work in a subfolder.
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const projectsHref = `${basePath}/projects`;
+// Social networks need a raster image; SVG covers use the shared preview card.
+const shareImage = images.find(({ src }) => /\.(png|jpe?g|webp)$/i.test(src));
 ---
 
-<BaseLayout title={title} description={summary}>
+<BaseLayout title={title} description={summary} image={shareImage?.src} imageAlt={shareImage?.alt}>
   <article class="project-article">
     <a class="back-link text-link" href={projectsHref} data-analytics-event="return-click" data-analytics-location="project-top"><span aria-hidden="true">←</span> Back to projects</a>
 
@@ -25,12 +27,14 @@ const projectsHref = `${basePath}/projects`;
         <p class="eyebrow">Project</p>
         <h1>{title}</h1>
         {date && <p class="project-date">{date}</p>}
-        <!-- <p class="project-summary">{summary}</p> -->
-         <h3>Tools</h3>
+        <p class="project-summary">{summary}</p>
         {tools.length > 0 && (
-          <ul class="tag-list" aria-label="Tools and technologies">
-            {tools.map((tool) => <li>{tool}</li>)}
-          </ul>
+          <section aria-label="Tools and technologies">
+            <h2>Tools</h2>
+            <ul class="tag-list">
+              {tools.map((tool) => <li>{tool}</li>)}
+            </ul>
+          </section>
         )}
       </header>
 

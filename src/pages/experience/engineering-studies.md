@@ -21,9 +21,9 @@ gallery:
     alt: "IEEE Logo"
 ---
 
-# Taking the Long Way to Engineering
+## Taking the Long Way to Engineering
 
-## The idea
+### The idea
 
 For as long as I can remember, I've been fascinated by how things work. I've always loved building, taking things apart, and finding ways to make things better. Engineering seemed like a natural fit, but for a long time, I didn't believe I was capable of pursuing it.
 
@@ -31,7 +31,7 @@ During my final years of high school, I struggled a lot with self-doubt. I quest
 
 I went on to study Management and Organizational Studies at Western University, specializing in Finance and Administration. I learned a tremendous amount, met some incredible people, and gained valuable experience working in the corporate world. But as I progressed through my degree and into my career, I couldn't shake the feeling that something was missing.
 
-## Making the change
+### Making the change
 
 After spending time working in the corporate world, I began to realize that the lifestyle and career I had been working toward weren't necessarily what I wanted.
 
@@ -43,7 +43,7 @@ Eventually, I realized that I would rather try and struggle than spend the rest 
 
 So I took the leap.
 
-## Challenging myself
+### Challenging myself
 
 I enrolled in Electrical Engineering Technology at Fanshawe College, and I can confidently say it has been one of the best decisions of my life.
 
@@ -57,7 +57,7 @@ Beyond the classroom, I've found opportunities I never would have imagined. Beco
 
 I'm no longer just trying to get through school. I'm trying to get everything I possibly can out of it.
 
-## Looking back
+### Looking back
 
 One of the biggest lessons this experience has taught me is that **the path you start on doesn't have to be the path you finish on.**
 
@@ -67,7 +67,7 @@ I still experience self-doubt. I still encounter problems that make me question 
 
 I'm learning that being challenged doesn't mean I'm in the wrong place. Sometimes, it means I'm exactly where I need to be.
 
-## A message to anyone reading this
+### A message to anyone reading this
 
 If there's one thing I hope someone takes away from my experience, it's this:
 

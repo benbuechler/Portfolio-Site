@@ -1,0 +1,3 @@
+# Serve Google's exact verification URL without HTML extension redirects.
+/googleaa86e368f990d8bf.html /googleaa86e368f990d8bf.txt 200
+/blog /projects 301

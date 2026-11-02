@@ -4,6 +4,40 @@ This Astro portfolio has a home page, project stories and updates, contact
 information, and experience stories. Source comments explain the HTML, CSS, JavaScript,
 TypeScript, and Astro features used throughout the project.
 
+## Search engine metadata
+
+The production URL is `https://benbuechler.ca`, configured as `site` in
+[astro.config.mjs](astro.config.mjs). [Seo](src/components/Seo.astro), included
+by BaseLayout, generates each page's canonical URL, title, description, social
+sharing metadata, and JSON-LD for the site, author, page, and breadcrumbs.
+Use a specific `title` and `description` when adding a regular page; Markdown
+stories use their `title` and `summary`. Project photos supply social previews
+when they use a supported raster format; other pages use the shared
+1200 × 630 [preview image](public/images/social-card.png), with its editable
+[SVG source](public/images/social-card.svg).
+
+The sitemap integration generates `/sitemap-index.xml` and `/sitemap-0.xml`
+at build time. [robots.txt](src/pages/robots.txt.ts) points crawlers to the
+index. The sitemap reads the rendered robots metadata to omit `noindex`
+pages. Experience entries with `hasStory: false` receive `noindex, follow`,
+keeping unfinished stories out of the sitemap while their timeline summaries
+remain visible. Set `hasStory: true` when a story is ready to be indexed.
+The 404 page is also excluded. New published pages are included automatically.
+
+Cloudflare's `drop-trailing-slash` setting matches the canonical URLs and
+existing navigation. [The redirect rules](public/_redirects) also send the
+former `/blog` URL to `/projects` with an HTTP 301 response.
+
+The Google verification file belongs in `public/`, and Astro copies it to the
+site root without changing its contents. The exact `.html` URL is internally
+rewritten to the identical `.txt` copy, avoiding Cloudflare's HTML URL redirect.
+Keep both verification files and the rewrite after verification. After
+deploying, complete verification in Google Search Console, submit
+`https://benbuechler.ca/sitemap-index.xml` under **Sitemaps**, and use
+**URL inspection** to request indexing of the home page. Google controls when
+pages are crawled and indexed; see its
+[sitemap submission guide](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap#addsitemap).
+
 ## A useful reading order
 
 1. Start with [the home page](src/pages/index.astro) to see components put together.
@@ -294,7 +328,7 @@ also applied while the page is open; CSS supplies the system default without JS.
 | File or folder | Purpose |
 | --- | --- |
 | `public/favicon.svg` | Vector browser-tab icon, copied to the build as a static asset. |
-| `astro.config.mjs` | Astro settings; enables the React and MDX integrations. |
+| `astro.config.mjs` | Astro settings, production URL, React/MDX integrations, and sitemap generation. |
 | `tsconfig.json` | TypeScript/editor settings, inherited from Astro's strict preset. |
 | `wrangler.jsonc` | Cloudflare configuration for serving the built `dist/` assets. |
 | `.vscode/` | Recommended editor extension and a development launch configuration. |

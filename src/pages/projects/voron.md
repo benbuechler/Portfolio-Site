@@ -5,12 +5,12 @@
 layout: ../../layouts/ProjectLayout.astro
 # These four fields are required. Keep the summary to one or two sentences.
 title: "Voron 2.4 3D Printer"
-summary: "A brief introduction to what you built and why."
+summary: "Building a Voron 2.4 CoreXY 3D printer from individually sourced parts, with mechanical assembly, wiring, firmware setup, and ongoing improvements."
 # Put your photo in public/images/projects/ and use its public URL here.
 # Example: public/images/projects/amplifier.jpg -> /images/projects/amplifier.jpg
 # This existing illustration lets a copied template work until you add a photo.
 image: '/images/projects/voron/printer.jpeg'
-imageAlt: "Enclosed Voron 2.4 3D printer with a front touchscreen."
+imageAlt: "My assembled Voron 2.4 3D printer with an illuminated enclosure, visible printhead, and front control screen."
 # Add extra photos after the main image by uncommenting this list as files are added.
 gallery:
   - src: "/images/projects/voron/printer2.jpeg"
