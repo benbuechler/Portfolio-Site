@@ -7,7 +7,7 @@ layout: ../../layouts/ExperienceLayout.astro
 title: Early Education
 
 # Preview text for the timeline and the page's metadata description.
-summary: St. Mary's Choir & Catholic Central Highschool 
+summary: St. Mary's Choir & Catholic Central High School 
 
 # Category and period are display strings; they do not determine sort order.
 category: Education
