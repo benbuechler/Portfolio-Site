@@ -12,6 +12,10 @@ export interface ProjectFrontmatter extends GalleryMetadata {
   // Optional technology labels and manual ordering (smaller numbers first).
   tools?: string[];
   sortOrder?: number;
+  // Comments are enabled when Giscus is configured; false disables this article.
+  comments?: boolean;
+  // Keep this identifier unchanged if the article's URL changes later.
+  commentId?: string;
 }
 
 // The hub adds a destination and supplies defaults for the optional fields.

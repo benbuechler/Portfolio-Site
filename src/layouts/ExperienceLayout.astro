@@ -3,6 +3,7 @@
 // document/navigation and adds the structure shared by the Markdown stories.
 import BaseLayout from "./BaseLayout.astro";
 import ProjectGallery from "../components/ProjectGallery.astro";
+import Comments from "../components/Comments.astro";
 import { getGalleryImages } from "../lib/gallery";
 // import type is only for TypeScript checks; it adds no runtime JavaScript.
 import type { ExperienceFrontmatter } from "../lib/experiences";
@@ -13,7 +14,7 @@ interface Props {
 }
 
 // Destructuring gives convenient local names to the metadata fields.
-const { title, summary, category, period, organization, hasStory = true } = Astro.props.frontmatter;
+const { title, summary, category, period, organization, hasStory = true, comments = true, commentId } = Astro.props.frontmatter;
 const images = getGalleryImages(Astro.props.frontmatter, `Experience "${title}"`);
 // A template string combines Astro's configured base path with this route.
 // With this project's root base, BASE_URL is "/", giving "/experience".
@@ -50,6 +51,8 @@ const experienceHref = `${import.meta.env.BASE_URL}experience`;
         <!-- Astro inserts the Markdown body, converted into HTML, into this slot. -->
         <slot />
       </div>
+
+      <Comments title={title} enabled={hasStory && comments} commentId={commentId} />
 
       <!-- Repeat the return link so a reader reaching the bottom can navigate back. -->
       <footer class="experience-footer">

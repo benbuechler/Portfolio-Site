@@ -21,6 +21,11 @@ sortOrder:
 # true (the default when omitted) enables the timeline and node links.
 hasStory: true
 
+# Optional: comments appear on published stories once Giscus is configured.
+# comments: false
+# Preserve this ID if you later change the article's filename/URL.
+# commentId: "experience/my-story"
+
 # Optional photos: put files in public/images/experience/ and use their public
 # paths below. Uncomment and replace these examples with your own photos.
 # The main image appears first and needs imageAlt when supplied.

@@ -1,0 +1,130 @@
+---
+// Giscus stores comments in GitHub Discussions; articles stay static HTML.
+interface Props {
+  title: string;
+  enabled?: boolean;
+  commentId?: string;
+}
+
+const { title, enabled = true, commentId } = Astro.props;
+// Public identifiers from this site's generated Giscus snippet. Keeping defaults
+// here enables comments in ordinary builds; environment variables can override
+// them for another repository, or blank a value to disable the integration.
+// No GitHub token or other secret is needed in the website.
+const repo = import.meta.env.PUBLIC_GISCUS_REPO?.trim() ?? "benbuechler/Portfolio-Site";
+const repoId = import.meta.env.PUBLIC_GISCUS_REPO_ID?.trim() ?? "R_kgDOVcJjiw";
+const category = import.meta.env.PUBLIC_GISCUS_CATEGORY?.trim() ?? "Q&A";
+const categoryId = import.meta.env.PUBLIC_GISCUS_CATEGORY_ID?.trim() ?? "DIC_kwDOVcJji84DKZSc";
+const configured = Boolean(repo && repoId && category && categoryId);
+if (typeof enabled !== "boolean") {
+  throw new Error(`Article "${title}" needs comments to be true or false without quotes.`);
+}
+if (enabled && configured && !/^[\w.-]+\/[\w.-]+$/.test(repo)) {
+  throw new Error("PUBLIC_GISCUS_REPO must use the GitHub owner/repository format.");
+}
+if (commentId !== undefined && (typeof commentId !== "string" || !commentId.trim())) {
+  throw new Error(`Article "${title}" needs a nonempty, quoted commentId.`);
+}
+
+// Match the supplied snippet's pathname mapping by default. An explicit
+// commentId can preserve a discussion's original term when a page is renamed.
+const mapping = commentId === undefined ? "pathname" : "specific";
+const pageId = commentId?.trim();
+---
+
+{enabled && configured && (
+  <section class="article-comments" aria-labelledby="comments-heading" data-clarity-mask="true">
+    <h2 id="comments-heading">Comments</h2>
+    <p class="comments-introduction">
+      Sign in with GitHub to join the conversation.
+    </p>
+    <div class="giscus" id="article-discussion"></div>
+    <noscript><p>Enable JavaScript to read and leave comments.</p></noscript>
+
+    <!-- Keep both scripts inside the condition: unconfigured or disabled
+         articles should not request Giscus or initialize its UI. -->
+    <script
+      is:inline
+      src="https://giscus.app/client.js"
+      data-repo={repo}
+      data-repo-id={repoId}
+      data-category={category}
+      data-category-id={categoryId}
+      data-mapping={mapping}
+      data-term={pageId}
+      data-strict="0"
+      data-reactions-enabled="1"
+      data-emit-metadata="0"
+      data-input-position="bottom"
+      data-theme="preferred_color_scheme"
+      data-lang="en"
+      data-loading="lazy"
+      crossorigin="anonymous"
+      async
+    ></script>
+    <script is:inline>
+      (() => {
+        const section = document.currentScript?.closest(".article-comments");
+        const loader = section?.querySelector('script[src="https://giscus.app/client.js"]');
+        if (!section || !loader) return;
+
+        // Set the initial theme before the async loader runs. Once the iframe
+        // exists, Giscus accepts theme updates through its documented message API.
+        const syncTheme = () => {
+          const selectedTheme = document.documentElement.dataset.theme;
+          const theme = selectedTheme === "light" || selectedTheme === "dark"
+            ? selectedTheme
+            : "preferred_color_scheme";
+          loader.dataset.theme = theme;
+          section.querySelector("iframe.giscus-frame")?.contentWindow?.postMessage(
+            { giscus: { setConfig: { theme } } },
+            "https://giscus.app",
+          );
+        };
+        // The client creates its iframe before the loader's load event fires.
+        // Reapply on iframe load to cover theme changes during lazy loading.
+        const connectFrame = () => {
+          section.querySelector("iframe.giscus-frame")?.addEventListener("load", syncTheme);
+          syncTheme();
+        };
+        loader.addEventListener("load", connectFrame, { once: true });
+        connectFrame();
+        new MutationObserver(syncTheme).observe(document.documentElement, {
+          attributes: true,
+          attributeFilter: ["data-theme"],
+        });
+      })();
+    </script>
+  </section>
+)}
+
+<style>
+  .article-comments {
+    /* Clear desktop photo floats and occupy the article's reading column. */
+    clear: both;
+    grid-column: 1;
+    width: 100%;
+    min-width: 0;
+    max-width: 75ch;
+    margin-bottom: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid var(--color-border);
+  }
+
+  h2 {
+    margin: 0 0 0.75rem;
+    color: var(--color-text);
+    font-size: 1.5rem;
+    line-height: 1.3;
+  }
+
+  .comments-introduction,
+  noscript p {
+    margin: 0 0 1.5rem;
+    color: var(--color-muted);
+  }
+
+  .giscus {
+    min-width: 0;
+  }
+</style>

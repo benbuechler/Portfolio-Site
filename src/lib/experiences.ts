@@ -14,6 +14,10 @@ export interface ExperienceFrontmatter extends GalleryMetadata {
   organization?: string;
   // Omit or set true for a linked story; false shows only the timeline card.
   hasStory?: boolean;
+  // Comments appear on published stories when Giscus is configured.
+  comments?: boolean;
+  // Keep this identifier unchanged if the article's URL changes later.
+  commentId?: string;
   // A number sorts numerically, unlike text such as "1", "10", "2".
   sortOrder: number;
 }

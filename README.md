@@ -133,6 +133,50 @@ navigation, and unavailable or blocked Umami calls do not stop site controls.
 
 Run `node --test src/lib/analytics.test.ts` for the analytics regression checks.
 
+## Article comments with Giscus
+
+[Comments](src/components/Comments.astro) embeds [Giscus](https://giscus.app/) below
+project articles and published experience stories. Giscus is free and stores
+comments in GitHub Discussions while the articles remain static. Readers sign in
+with GitHub to comment; there is no separate guest display-name or email form.
+
+The component includes the public configuration for
+`benbuechler/Portfolio-Site`, using its **Q&A** discussion category. A normal
+`npm run build` includes this configuration; no environment variables are
+required for the current repository or its Cloudflare deployment.
+
+Comments are enabled by default for projects and experience entries with
+`hasStory: true`. Add `comments: false` to an article's YAML frontmatter to opt
+out. The embed loads its iframe lazily and follows the site's light/dark theme.
+Moderate comments through the repository's GitHub Discussions.
+
+By default, articles use Giscus's **pathname** mapping with `data-strict="0"`,
+matching the configured embed. Set an optional `commentId` to use **specific
+term** mapping instead. Before renaming an article with existing comments, set
+`commentId` to its original Giscus term, normally the old path without its leading
+slash, such as `commentId: projects/voron`. Keep that term stable to retain the
+thread across future URL changes.
+
+To use a different repository, enable Discussions on a public repository,
+install the [Giscus GitHub App](https://github.com/apps/giscus), and choose a
+category in the [Giscus configurator](https://giscus.app/). A separate public
+comments repository also works if the site's source should remain private.
+Copy [.env.example](.env.example) to `.env` and replace all four public values
+with the configurator's generated script attributes:
+
+| Environment variable | Generated script attribute |
+| --- | --- |
+| `PUBLIC_GISCUS_REPO` | `data-repo` |
+| `PUBLIC_GISCUS_REPO_ID` | `data-repo-id` |
+| `PUBLIC_GISCUS_CATEGORY` | `data-category` |
+| `PUBLIC_GISCUS_CATEGORY_ID` | `data-category-id` |
+
+These optional overrides need no GitHub token or other secret. Explicitly
+setting any value to blank hides the comments section. Restart the development
+server after changing `.env`. For production overrides, set the variables in the
+Cloudflare **build environment**, then rebuild and deploy; runtime variables
+alone cannot change generated static HTML.
+
 ## Home-page map motion
 
 The node map gently drifts while idle, easing toward a new random direction

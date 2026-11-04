@@ -33,6 +33,11 @@ tools:
   - Your tools
 # Optional: smaller numbers appear first on the hub; the default is 0.
 sortOrder: 0
+# Optional: comments are enabled once Giscus is configured. Use false to disable.
+# comments: false
+# Optional stable thread ID; set before changing the article's filename/URL.
+# To preserve an existing thread, use its old term, e.g. "projects/my-project".
+# commentId: "projects/my-project"
 ---
 
 <!-- Write your project here in Markdown. ## adds a section heading; the
