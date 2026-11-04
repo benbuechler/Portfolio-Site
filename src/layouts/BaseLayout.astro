@@ -51,16 +51,63 @@ const currentPath = Astro.url.pathname.replace(/\/$/, "") || "/";
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <Seo title={title} description={description} image={image} imageAlt={imageAlt} noindex={noindex} />
 
+    <!-- Giscus returns sign-in sessions in the URL. Save and remove that value
+         before any third-party tracker can record the callback URL. -->
+    <script is:inline data-giscus-session-cleanup>
+      let portfolioAnalyticsAllowed = false;
+      (() => {
+        try {
+          const url = new URL(window.location.href);
+          if (url.searchParams.has("giscus")) {
+            const session = url.searchParams.get("giscus");
+            if (session) {
+              try {
+                // Use the same storage key and encoding as Giscus's client.
+                localStorage.setItem("giscus-session", JSON.stringify(session));
+              } catch {}
+            }
+            url.searchParams.delete("giscus");
+            window.history.replaceState(window.history.state, "", url.href);
+          }
+          portfolioAnalyticsAllowed = true;
+        } catch {
+          // If URL cleanup fails, leave both trackers off for this page load.
+        }
+      })();
+    </script>
+
     <!-- Umami records pageviews; the shared browser script below records actions. -->
-    <script is:inline defer src="https://cloud.umami.is/script.js" data-website-id="16fef081-6810-434f-8aa8-86e60732cf81"></script>
+    <script is:inline data-umami-loader>
+      (() => {
+        if (!portfolioAnalyticsAllowed) return;
+        const loadUmami = () => {
+          const script = document.createElement("script");
+          script.src = "https://cloud.umami.is/script.js";
+          script.async = true;
+          script.dataset.websiteId = "16fef081-6810-434f-8aa8-86e60732cf81";
+          // Pageview URLs should not collect query strings, including auth values.
+          script.dataset.excludeSearch = "true";
+          document.head.appendChild(script);
+        };
+        // Dynamically created scripts do not honor defer. Wait for parsing to
+        // finish so the tracker sees the completed page, like the previous tag.
+        if (document.readyState === "loading") {
+          document.addEventListener("DOMContentLoaded", loadUmami, { once: true });
+        } else {
+          loadUmami();
+        }
+      })();
+    </script>
 
     <!-- Load Microsoft Clarity on every page using this shared layout. -->
-    <script is:inline type="text/javascript">
-      (function(c,l,a,r,i,t,y){
-        c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
-        t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
-        y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
-      })(window, document, "clarity", "script", "z75b9f8g17");
+    <script is:inline type="text/javascript" data-clarity-loader>
+      if (portfolioAnalyticsAllowed) {
+        (function(c,l,a,r,i,t,y){
+          c[a]=c[a]||function(){(c[a].q=c[a].q||[]).push(arguments)};
+          t=l.createElement(r);t.async=1;t.src="https://www.clarity.ms/tag/"+i;
+          y=l.getElementsByTagName(r)[0];y.parentNode.insertBefore(t,y);
+        })(window, document, "clarity", "script", "z75b9f8g17");
+      }
     </script>
     
     <!-- is:inline tells Astro to leave this script in place without bundling it.

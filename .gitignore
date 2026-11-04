@@ -18,8 +18,22 @@ pnpm-debug.log*
 
 
 # Environment-variable files hold machine-specific settings and can contain secrets.
-.env
-.env.production
+# Keep only explicit examples, which must contain public values or placeholders.
+.env*
+!.env.example
+!.env.*.example
+
+# Local Cloudflare secrets and deployment state must not enter the public repo.
+.dev.vars*
+!.dev.vars.example
+.wrangler/
+.aws/
+
+# Common private-key and credential-bundle formats.
+*.pem
+*.key
+*.p12
+*.pfx
 
 # macOS Finder metadata is not part of the website.
 .DS_Store

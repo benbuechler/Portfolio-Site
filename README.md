@@ -133,6 +133,40 @@ navigation, and unavailable or blocked Umami calls do not stop site controls.
 
 Run `node --test src/lib/analytics.test.ts` for the analytics regression checks.
 
+## Security and public source
+
+The Giscus repository/category IDs, Umami website ID, Clarity project ID, and
+Google verification file are public configuration. They do not grant access to
+your accounts. Keep actual API keys, passwords, private keys, and deployment
+tokens out of source code and all `PUBLIC_*` environment variables.
+[.gitignore](.gitignore) excludes local environment files, Cloudflare secrets and
+state, AWS credentials, and common private-key formats. Example environment
+files must contain only public values or placeholders. Ignore rules do not
+remove files from existing Git history.
+
+[BaseLayout](src/layouts/BaseLayout.astro) removes Giscus sign-in callback
+sessions from the URL before loading analytics. Umami also excludes query
+strings. Analytics stays disabled on a callback if its sensitive URL cannot be
+cleared. The site still trusts the third-party Giscus, Umami, and Clarity scripts
+it loads; avoid adding scripts from untrusted sources.
+
+Cloudflare reads [public/_headers](public/_headers) from the static build to
+block framing of this site, disable MIME sniffing, limit referrers, deny unused
+device permissions, and restrict base URLs, plugins, and form destinations.
+These headers take effect after deployment. The content policy is a baseline;
+it does not restrict script sources. If hosting changes to server-rendered
+responses, set equivalent headers in that server.
+
+[Dependabot](.github/dependabot.yml) requests weekly npm dependency updates once
+the configuration reaches GitHub's default branch. Review those pull requests
+and run `npm audit`, `npm run build`, and `node --test src/lib/*.test.ts` when
+updating dependencies. Check GitHub's Security tab for secret-scanning and
+dependency alerts; repository push protection and account two-factor
+authentication are settings managed on GitHub.
+
+Giscus only requires its Discussions repository to be public. The site's source
+can remain private if comments use a separate public repository.
+
 ## Article comments with Giscus
 
 [Comments](src/components/Comments.astro) embeds [Giscus](https://giscus.app/) below
