@@ -4,16 +4,18 @@ import type { GalleryImage } from "../lib/gallery";
 interface Props {
   images: GalleryImage[];
   subject?: string;
+  // Compact project thumbnails and wide showcases share the same lightbox.
+  layout?: "sidebar" | "showcase" | "compact";
 }
 
-const { images, subject = "Project" } = Astro.props;
+const { images, subject = "Project", layout = "sidebar" } = Astro.props;
 // Metadata uses public-root paths. Add the configured base for subfolder hosting.
 const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
 const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src}` }));
 ---
 
 {pictures.length > 0 && (
-  <project-gallery role="region" aria-label={`${subject} photographs`}>
+  <project-gallery class:list={[{ "gallery-showcase": layout !== "sidebar", "gallery-compact": layout === "compact", "gallery-single": pictures.length === 1 }]} role="region" aria-label={`${subject} photographs`}>
     <h2 class="gallery-heading">{subject} photos</h2>
     <div class="gallery-grid">
       {pictures.map((image, index) => (
@@ -40,6 +42,9 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
         </figure>
       ))}
     </div>
+    {layout !== "sidebar" && pictures.length > 1 && (
+      <p class="gallery-hint">Swipe to browse. Tap a photo to expand.</p>
+    )}
 
     {/* showModal puts this above the pinned navigation and makes the rest of
         the document inert. Escape and Tab follow the browser's dialog behavior. */}
@@ -264,6 +269,47 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
     max-height: 65svh;
   }
 
+  /* Wide project galleries show equally sized photos. Keep the complete image
+     visible; the existing lightbox provides a closer view of fine details. */
+  .gallery-showcase .gallery-grid {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+    gap: 1.25rem;
+  }
+
+  .gallery-showcase .gallery-photo {
+    grid-column: auto;
+  }
+
+  .gallery-showcase .gallery-image-link {
+    height: clamp(13rem, 25vw, 21rem);
+    aspect-ratio: auto;
+  }
+
+  .gallery-showcase .gallery-feature img {
+    height: 100%;
+    max-height: none;
+  }
+
+  .gallery-compact .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+  }
+
+  .gallery-compact .gallery-image-link {
+    height: clamp(8.25rem, 11vw, 11rem);
+  }
+
+  .gallery-compact.gallery-single .gallery-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .gallery-hint {
+    display: none;
+    margin: 0.5rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.8125rem;
+  }
+
   .gallery-image-link:hover,
   .gallery-image-link:focus-visible {
     border-color: var(--color-accent);
@@ -395,6 +441,62 @@ const pictures = images.map((image) => ({ ...image, src: `${basePath}${image.src
     padding: 0;
     font-size: 1.75rem;
     line-height: 1;
+  }
+
+  @media (max-width: 640px) {
+    /* A glimpse of the next photo and a visible scrollbar invite swiping.
+       Tab also brings each photo link into view without extra JavaScript. */
+    .gallery-showcase .gallery-grid {
+      grid-template-columns: none;
+      grid-auto-flow: column;
+      grid-auto-columns: 85%;
+      gap: 0.75rem;
+      padding: 0.25rem 0.25rem 0.75rem;
+      overflow-x: auto;
+      overscroll-behavior-x: contain;
+      scroll-snap-type: x proximity;
+      scroll-padding-inline: 0.25rem;
+      scrollbar-width: thin;
+    }
+
+    .gallery-showcase.gallery-single .gallery-grid {
+      grid-auto-columns: 100%;
+    }
+
+    .gallery-showcase .gallery-photo {
+      scroll-snap-align: start;
+    }
+
+    .gallery-showcase .gallery-image-link {
+      height: clamp(12rem, 56vw, 19rem);
+    }
+
+    .gallery-compact .gallery-image-link {
+      height: clamp(13rem, 61vw, 20.5rem);
+    }
+
+    .gallery-hint {
+      display: block;
+    }
+
+    .lightbox-button {
+      min-width: 48px;
+      min-height: 48px;
+    }
+
+    .lightbox-navigation .lightbox-button {
+      flex: 1;
+    }
+  }
+
+  @media (max-width: 640px), (max-height: 500px) {
+    .gallery-dialog {
+      padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    }
+
+    .lightbox-photo img {
+      height: min(55dvh, 32rem);
+    }
   }
 
   @media (prefers-reduced-motion: reduce) {

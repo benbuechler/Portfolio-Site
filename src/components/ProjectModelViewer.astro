@@ -1,0 +1,390 @@
+---
+import type { ProjectModel } from "../lib/projects";
+
+type Props = ProjectModel;
+
+const { src, alt } = Astro.props;
+const basePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+---
+
+<project-model-viewer>
+  <h2>Explore in 3D</h2>
+  <div class="model-preview" data-model-home>
+    <div class="model-stage" data-model-stage>
+      {/* The same interactive viewer moves between the preview and dialog. */}
+      <model-viewer
+        src={`${basePath}${src}`}
+        alt={alt}
+        camera-controls
+        camera-orbit="30deg 75deg 105%"
+        touch-action="pan-y"
+        interaction-prompt="none"
+        shadow-intensity="1"
+        loading="lazy"
+      ></model-viewer>
+      <p class="model-status" data-model-status role="status" hidden></p>
+    </div>
+    <button type="button" class="model-launch" data-model-open aria-haspopup="dialog" aria-label={`Open 3D viewer: ${alt}`} disabled>
+      <span class="model-launch-label">
+        Expand
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M8 3H3v5m13-5h5v5M3 16v5h5m13-5v5h-5" />
+        </svg>
+      </span>
+    </button>
+  </div>
+  <p class="model-preview-hint">Drag to rotate. Scroll or pinch to zoom.</p>
+  <noscript><p>Enable JavaScript to open the interactive 3D model.</p></noscript>
+
+  <dialog class="model-dialog" aria-label="Interactive 3D model viewer">
+    <div class="model-dialog-panel">
+      <div class="model-toolbar">
+        <h2>3D model</h2>
+        <button type="button" class="model-close" data-model-close aria-label="Close 3D viewer" autofocus>
+          <span aria-hidden="true">×</span>
+        </button>
+      </div>
+      <div class="model-expanded" data-model-expanded></div>
+      <p class="model-instructions">Drag to rotate. Scroll or pinch to zoom. Use arrow keys when focused.</p>
+    </div>
+  </dialog>
+</project-model-viewer>
+
+<script>
+  import { trackEvent } from "../lib/analytics";
+
+  // Load Google's web component only when a page actually contains a model.
+  // Pin the CDN version so upgrades are deliberate; no React runtime is needed.
+  const moduleUrl = "https://cdn.jsdelivr.net/npm/@google/model-viewer@4.4.0/dist/model-viewer.min.js";
+  let modelViewerModule: Promise<unknown> | undefined;
+
+  class ProjectModelViewer extends HTMLElement {
+    private cleanup?: () => void;
+
+    connectedCallback() {
+      if (this.cleanup) return;
+      const viewer = this.querySelector<HTMLElement & { loaded?: boolean }>("model-viewer");
+      const status = this.querySelector<HTMLElement>("[data-model-status]");
+      const home = this.querySelector<HTMLElement>("[data-model-home]");
+      const stage = this.querySelector<HTMLElement>("[data-model-stage]");
+      const expanded = this.querySelector<HTMLElement>("[data-model-expanded]");
+      const opener = this.querySelector<HTMLButtonElement>("[data-model-open]");
+      const dialog = this.querySelector<HTMLDialogElement>("dialog");
+      const panel = this.querySelector<HTMLElement>(".model-dialog-panel");
+      if (!viewer || !status || !home || !stage || !expanded || !opener || !dialog || !panel) return;
+
+      const controller = new AbortController();
+      const { signal } = controller;
+      const options = { signal };
+      let previousOverflow: { body: string; root: string } | undefined;
+      let backdropPress = false;
+      let closeInput: "button" | "keyboard" | "backdrop" = "keyboard";
+      status.textContent = "Loading 3D model…";
+      status.hidden = false;
+
+      const showLoaded = () => {
+        status.hidden = true;
+      };
+      const showError = () => {
+        status.textContent = "The 3D view is unavailable. You can still browse the project photos.";
+        status.hidden = false;
+      };
+
+      const restorePreview = () => {
+        if (stage.parentElement !== home) home.prepend(stage);
+        if (previousOverflow) {
+          document.body.style.overflow = previousOverflow.body;
+          document.documentElement.style.overflow = previousOverflow.root;
+          previousOverflow = undefined;
+        }
+      };
+
+      if (typeof dialog.showModal === "function") {
+        opener.disabled = false;
+        opener.addEventListener("click", (event) => {
+          if (dialog.open) return;
+          try {
+            dialog.showModal();
+          } catch {
+            return;
+          }
+          previousOverflow = {
+            body: document.body.style.overflow,
+            root: document.documentElement.style.overflow,
+          };
+          document.body.style.overflow = "hidden";
+          document.documentElement.style.overflow = "hidden";
+          // ResizeObserver in model-viewer reframes the same scene at its new size.
+          expanded.append(stage);
+          closeInput = "keyboard";
+          trackEvent("model-open", { location: "project-model", input: event.detail === 0 ? "keyboard" : "pointer" });
+        }, options);
+        this.querySelector("[data-model-close]")?.addEventListener("click", () => {
+          closeInput = "button";
+          dialog.close();
+        }, options);
+        dialog.addEventListener("cancel", () => { closeInput = "keyboard"; }, options);
+        dialog.addEventListener("close", () => {
+          const wasOpen = previousOverflow !== undefined;
+          restorePreview();
+          if (wasOpen) {
+            trackEvent("model-close", { location: "project-model", input: closeInput });
+            if (this.isConnected) opener.focus({ preventScroll: true });
+          }
+        }, options);
+
+        // Only a press and release on the backdrop dismisses the model;
+        // rotating the model and releasing outside it keeps the dialog open.
+        const outsidePanel = (event: MouseEvent) => {
+          const bounds = panel.getBoundingClientRect();
+          return event.clientX < bounds.left || event.clientX > bounds.right || event.clientY < bounds.top || event.clientY > bounds.bottom;
+        };
+        dialog.addEventListener("pointerdown", (event) => {
+          backdropPress = event.target === dialog && outsidePanel(event);
+        }, options);
+        dialog.addEventListener("click", (event) => {
+          if (backdropPress && event.target === dialog && outsidePanel(event)) {
+            closeInput = "backdrop";
+            dialog.close();
+          }
+          backdropPress = false;
+        }, options);
+      } else {
+        // Inline controls remain available when dialogs are unsupported.
+        opener.hidden = true;
+      }
+
+      viewer.addEventListener("load", showLoaded, options);
+      viewer.addEventListener("error", showError, options);
+      modelViewerModule ??= import(/* @vite-ignore */ moduleUrl);
+      modelViewerModule.then(() => {
+        if (!signal.aborted && viewer.loaded) showLoaded();
+      }).catch(() => {
+        if (!signal.aborted) showError();
+      });
+
+      this.cleanup = () => {
+        controller.abort();
+        if (dialog.open) dialog.close();
+        restorePreview();
+        opener.disabled = true;
+      };
+    }
+
+    disconnectedCallback() {
+      this.cleanup?.();
+      this.cleanup = undefined;
+    }
+  }
+
+  if (!customElements.get("project-model-viewer")) {
+    customElements.define("project-model-viewer", ProjectModelViewer);
+  }
+</script>
+
+<style>
+  project-model-viewer {
+    display: block;
+    min-width: 0;
+  }
+
+  h2 {
+    margin: 0 0 1rem;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+  }
+
+  .model-preview {
+    position: relative;
+    height: clamp(11rem, 15.5vw, 14.5rem);
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-surface);
+  }
+
+  .model-stage {
+    position: relative;
+    height: 100%;
+    min-width: 0;
+    overflow: hidden;
+    border-radius: inherit;
+    background: var(--color-surface);
+  }
+
+  model-viewer {
+    display: block;
+    width: 100%;
+    height: 100%;
+    --poster-color: transparent;
+    --progress-bar-color: var(--color-accent);
+  }
+
+  model-viewer:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 4px;
+  }
+
+  .model-launch {
+    position: absolute;
+    right: 0.75rem;
+    bottom: 0.75rem;
+    display: inline-flex;
+    padding: 0;
+    border: 0;
+    border-radius: inherit;
+    background: transparent;
+    color: var(--color-text);
+    cursor: pointer;
+    font: inherit;
+  }
+
+  .model-launch[hidden],
+  .model-status[hidden] {
+    display: none;
+  }
+
+  .model-launch-label {
+    display: inline-flex;
+    min-height: 44px;
+    align-items: center;
+    gap: 0.625rem;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg);
+    font-size: 0.875rem;
+    font-weight: 600;
+  }
+
+  .model-launch:hover .model-launch-label {
+    border-color: var(--color-accent);
+  }
+
+  .model-launch:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .model-status {
+    position: absolute;
+    inset: 0;
+    display: grid;
+    align-content: center;
+    margin: 0;
+    padding: 1rem 1rem 4rem;
+    background: var(--color-surface);
+    text-align: center;
+  }
+
+  .model-dialog {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100dvh;
+    max-width: none;
+    max-height: none;
+    margin: 0;
+    padding: clamp(0.5rem, 2vw, 1.5rem);
+    border: 0;
+    background: transparent;
+    color: var(--color-text);
+  }
+
+  .model-dialog[open] {
+    display: grid;
+    place-items: center;
+  }
+
+  .model-dialog::backdrop {
+    background: rgb(0 0 0 / 80%);
+  }
+
+  .model-dialog-panel {
+    display: flex;
+    width: min(100%, 75rem);
+    height: min(100%, 52rem);
+    min-height: 0;
+    flex-direction: column;
+    gap: 1rem;
+    padding: clamp(0.75rem, 2vw, 1.5rem);
+    overflow: auto;
+    overscroll-behavior: contain;
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius);
+    background: var(--color-bg);
+  }
+
+  .model-toolbar {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+  }
+
+  .model-toolbar h2 {
+    margin: 0;
+  }
+
+  .model-close {
+    display: grid;
+    min-width: 48px;
+    min-height: 48px;
+    place-items: center;
+    padding: 0;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    font: inherit;
+    font-size: 1.75rem;
+    line-height: 1;
+    cursor: pointer;
+  }
+
+  .model-close:hover {
+    border-color: var(--color-accent);
+  }
+
+  .model-close:focus-visible {
+    outline: 2px solid var(--color-accent);
+    outline-offset: 3px;
+  }
+
+  .model-expanded {
+    min-height: 0;
+    flex: 1;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+  }
+
+  .model-expanded .model-status {
+    padding: 1rem;
+  }
+
+  .model-instructions {
+    flex-shrink: 0;
+    margin: 0;
+  }
+
+  p {
+    margin: 0.75rem 0 0;
+    color: var(--color-muted);
+    font-size: 0.875rem;
+    line-height: 1.6;
+  }
+
+  @media (max-width: 640px) {
+    .model-preview {
+      height: 13rem;
+    }
+
+    .model-dialog {
+      padding: max(0.5rem, env(safe-area-inset-top)) max(0.5rem, env(safe-area-inset-right)) max(0.5rem, env(safe-area-inset-bottom)) max(0.5rem, env(safe-area-inset-left));
+    }
+  }
+</style>

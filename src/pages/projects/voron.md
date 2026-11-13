@@ -11,6 +11,11 @@ summary: "Building a Voron 2.4 CoreXY 3D printer from individually sourced parts
 # This existing illustration lets a copied template work until you add a photo.
 image: '/images/projects/voron/printer.jpeg'
 imageAlt: "My assembled Voron 2.4 3D printer with an illuminated enclosure, visible printhead, and front control screen."
+# Model file: public/models/voron/voron.glb. Refresh/rebuild after replacing it.
+# The 3D viewer stays hidden until the file exists; the photos remain available.
+model:
+  src: /models/voron/voron.glb
+  alt: "An interactive 3D model of my Voron 2.4 CoreXY printer."
 # Add extra photos after the main image by uncommenting this list as files are added.
 gallery:
   - src: "/images/projects/voron/printer2.jpeg"

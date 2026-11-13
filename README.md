@@ -101,6 +101,7 @@ their **Properties** to compare destinations, placements, and controls.
 | `map-rotate` / `map-reset` | Rotation buttons, keyboard controls, or a completed drag. |
 | `map-motion-change` | Explicit pause/resume of automatic rotation. |
 | `gallery-open` / `gallery-next` / `gallery-previous` / `gallery-close` | Photo viewer actions, including keyboard and backdrop dismissal. |
+| `model-open` / `model-close` | Expanded 3D viewer actions, including keyboard and backdrop dismissal. |
 | `gallery-image-click` | Direct photo link when opening a separate tab or using the fallback viewer. |
 | `menu-toggle` / `theme-change` | Menu open/close button or a deliberate theme choice. |
 | `skip-to-content` | Keyboard skip link. |
@@ -257,10 +258,48 @@ the experience stories. Project pages hold both the build story and ongoing note
 entry. [ProjectLayout](src/layouts/ProjectLayout.astro) styles the detail pages;
 [projects.astro](src/pages/projects.astro) discovers and displays their cards.
 The hub uses three columns on large screens, two on medium screens, and one
-on phones. Hub covers are cropped to a consistent 8:5 ratio. The project page
-shows the full photo in a right sidebar on desktop, stacked with the write-up
-on mobile. Click a thumbnail to expand the gallery; use Previous/Next or the
-left/right arrow keys to browse, and Escape to close it.
+on phones. Hub covers are cropped to a consistent 8:5 ratio. Project pages have
+a compact media sidebar on desktop; the text uses the available width and flows
+below the sidebar. On phones, the small model preview and swipeable photos stack
+above the story. Click a model or photo to open its larger viewer. Section links
+below the introduction jump directly to the story, model, or photos. Both viewers
+support Escape, a close button, and backdrop dismissal. The photo viewer also
+supports Previous/Next and left/right arrow keys.
+
+## Interactive 3D project models
+
+[ProjectModelViewer](src/components/ProjectModelViewer.astro) uses Google's
+[`<model-viewer>`](https://modelviewer.dev/) with mouse, touch, and keyboard
+camera controls in both the small preview and the expanded dialog. Use the
+separate **Expand** button to open the larger view; closing it returns the model
+to the sidebar and restores keyboard focus. The same
+viewer moves between both sizes, so there is only one model instance. The dialog
+fits phone and landscape screens and follows the site's theme.
+The viewer library loads from a pinned jsDelivr URL only on pages with a model;
+the model itself loads lazily against a plain background with a loading message.
+
+The Voron page is already configured: add your printer model as
+`public/models/voron/voron.glb`, then refresh the development page or rebuild
+for production. Until that file exists, the viewer stays hidden and the page
+continues to show its photos.
+
+For another project, put its model under `public/models/` and add this to its
+Markdown frontmatter:
+
+```yaml
+model:
+  src: /models/my-project/model.glb
+  alt: "An interactive 3D model of the assembled project."
+```
+
+Use a `.glb` export when possible: it can package the geometry, materials, and
+textures in one file. `.gltf` also works; keep its referenced buffers and textures
+beside it using the paths in the file. CAD formats such as STEP and STL need to
+be converted to GLB or glTF first. Test the export in the
+[model-viewer editor](https://modelviewer.dev/editor/) to check its appearance.
+For a large CAD assembly, simplify the geometry before exporting so it loads
+comfortably on phones. The existing photo gallery remains available below the
+viewer, including when the model fails to load.
 
 ## Adding photos to an experience
 

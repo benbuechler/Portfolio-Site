@@ -3,6 +3,12 @@ import { getGalleryImages } from "./gallery";
 import type { GalleryImage, GalleryMetadata } from "./gallery";
 export type ProjectImage = GalleryImage;
 
+export interface ProjectModel {
+  // A GLB or glTF file in public/models/, served from the site root.
+  src: string;
+  alt: string;
+}
+
 export interface ProjectFrontmatter extends GalleryMetadata {
   title: string;
   summary: string;
@@ -12,6 +18,8 @@ export interface ProjectFrontmatter extends GalleryMetadata {
   // Optional technology labels and manual ordering (smaller numbers first).
   tools?: string[];
   sortOrder?: number;
+  // The viewer appears once this local model file has been added.
+  model?: ProjectModel | null;
   // Comments are enabled when Giscus is configured; false disables this article.
   comments?: boolean;
   // Keep this identifier unchanged if the article's URL changes later.

@@ -22,9 +22,14 @@ summary: "A brief introduction to what you built and why."
 #     caption: "The assembled circuit board."
 #   - src: /images/projects/amplifier-testing.jpg
 #     alt: "The amplifier connected to test equipment on a workbench."
-# The gallery sits beside the write-up on desktop and stacks on mobile.
+# Compact media sits beside the story on desktop and stacks above it on mobile.
 # Click a photo to expand it. With neither image nor gallery, the page is text-only;
 # gallery without image adds detail-page photos while leaving the hub card text-only.
+# Optional interactive 3D model, shown above the photos once its file exists.
+# Put a .glb (recommended) or .gltf file in public/models/ and use its public URL.
+# model:
+#   src: /models/my-project/model.glb
+#   alt: "A description of the model visitors can rotate and zoom."
 # Optional: one quoted date appears as written on the card and project page.
 # You can also use a range or "Ongoing". Remove date to hide it; it does not sort projects.
 date: "October 2026"
