@@ -301,6 +301,24 @@ For a large CAD assembly, simplify the geometry before exporting so it loads
 comfortably on phones. The existing photo gallery remains available below the
 viewer, including when the model fails to load.
 
+### Model size and Cloudflare deployment
+
+Cloudflare Workers limits each static asset to
+[25 MiB](https://developers.cloudflare.com/workers/platform/limits/#static-assets).
+The Voron web model uses Draco geometry compression and is about 13.8 MiB,
+reduced from 63.5 MiB without removing triangles or changing its assembly or
+materials. The viewer loads its Draco decoder automatically.
+
+The original export is backed up locally at
+`model-sources/voron/voron-original.glb`. This directory is ignored by Git and
+stays outside `public/`, so Astro does not copy it into the deployment. Keep
+uncompressed originals there and put compressed web exports in `public/models/`.
+
+`npm run build` now runs [the asset-size check](scripts/check-asset-sizes.mjs)
+after Astro finishes. It fails with the offending file paths if any built asset
+exceeds 25 MiB, catching this before Wrangler uploads the site. Recompress any
+replacement model before rebuilding and deploying.
+
 ## Adding photos to an experience
 
 Experience stories support the same optional photo fields as projects. Add them

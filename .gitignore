@@ -10,6 +10,9 @@ dist/
 # Dependencies: package.json declares the packages; installation recreates these.
 node_modules/
 
+# Local, uncompressed model originals; public/models/ holds web-ready exports.
+model-sources/
+
 # Logs: local diagnostic output rather than application source code.
 npm-debug.log*
 yarn-debug.log*
